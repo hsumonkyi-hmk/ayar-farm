@@ -1,0 +1,19 @@
+import app from "./app";
+import dotenv from "dotenv";
+import http from "http";
+import initSocket from "./socket";
+import registerSocketHandlers from "./sockets";
+
+dotenv.config();
+
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+
+const server = http.createServer(app);
+
+// initialize socket.io and register handlers
+const io = initSocket(server);
+registerSocketHandlers(io);
+
+server.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
+});
