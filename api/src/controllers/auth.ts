@@ -1,9 +1,11 @@
 import e, { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
+import { v2 as cloudinary } from 'cloudinary';
 
 import { prisma } from "../prisma/client";
 import { AuthService } from '../services/auth';
 import { generateOTP } from '../utils';
+import { emitToAdmins } from '../socket';
 
 export class AuthController {
 
@@ -66,14 +68,17 @@ export class AuthController {
         // Generate JWT token
         const token = AuthService.generateToken(user.id, user.user_type);
 
+        // Notify admins
+        emitToAdmins('user:registered', { user: { name: user.name, user_type: user.user_type } });
+
         // return user data without password
         const { password: _pwd, ...userWithoutPassword } = user;
         res.status(201).json({ message: 'User registered successfully', data: { user: userWithoutPassword, token } });
     }
 
     public async login(req: Request, res: Response): Promise<void> {
-        const { phone_number, password } = req.body;
-        const user = await prisma.users.findUnique({ where: { phone_number } });
+        const { phone_number, email, password } = req.body;
+        const user = await prisma.users.findUnique({ where: { phone_number, email } });
 
         if (!user) {
             res.status(404).json({ message: 'User not found' });
@@ -81,7 +86,14 @@ export class AuthController {
         }
         
         const isValidPassword = await bcrypt.compare(password, user.password);
-        if (isValidPassword) {
+        const isVerified = user.isVerified;
+
+        if (!isVerified) {
+            res.status(403).json({ message: 'Account not verified. Please verify your account before logging in.' });
+            return;
+        }
+
+        if (isValidPassword && isVerified) {
             // Generate JWT token
             const token = AuthService.generateToken(user.id, user.user_type);
 
@@ -178,65 +190,25 @@ export class AuthController {
 
     public async accountUpdate(req: Request, res: Response): Promise<void> {
         try {
-            // Determine target user id:
-            // 1) req.user set by auth middleware
-            // 2) body.id or params.id
-            // 3) Bearer token -> AuthService.verifyToken(token).sub or userId
-            let userId: string | undefined =
-                (req as any).user?.id ?? (req.body && req.body.id) ?? (req.params && req.params.id);
-
-            if (!userId) {
-                const authHeader = (req.headers.authorization || req.headers.Authorization) as string | undefined;
-                if (authHeader && authHeader.startsWith("Bearer ")) {
-                const token = authHeader.split(" ")[1];
-                const payload = AuthService.verifyToken(token);
-                if (payload) userId = payload.sub ?? (payload.userId as string | undefined);
-                }
-            }
-
-            if (!userId) {
-                res.status(400).json({ message: "User id required (body.id, params.id or Bearer token)" });
-                return;
-            }
-
-            // Allowed updatable fields
-            const {
-                name,
-                email,
-                gender,
-                profile_picture,
-                location,
-                password,
-                user_type,
-            } = req.body as {
-                name?: string;
-                email?: string;
-                gender?: string;
-                profile_picture?: string;
-                location?: string;
-                password?: string;
-                user_type?: string;
-            };
+            const userId = (req as any).user.id;
+            const { name, email, gender, location, password, user_type } = req.body;
+            const file = (req as any).file;
 
             const data: Record<string, any> = {};
             if (name) data.name = name;
             if (email) data.email = email;
             if (gender) data.gender = gender;
-            if (profile_picture) data.profile_picture = profile_picture;
+            if (file) data.profile_picture = file.path;
             if (location) data.location = location;
             if (user_type) data.user_type = user_type;
             if (password) data.password = await bcrypt.hash(password, 10);
 
             if (Object.keys(data).length === 0) {
-                res.status(400).json({ message: "No valid fields provided for update" });
+                res.status(400).json({ message: "No fields to update" });
                 return;
             }
 
-            const updated = await prisma.users.update({
-                where: { id: userId },
-                data,
-            });
-
+            const updated = await prisma.users.update({ where: { id: userId }, data });
             const { password: _pwd, ...userWithoutPassword } = updated;
             res.status(200).json({ message: "Account updated", data: { user: userWithoutPassword } });
         } catch (err) {
@@ -246,28 +218,20 @@ export class AuthController {
 
     public async accountDeletion(req: Request, res: Response): Promise<void> {
         try {
-            let userId: string | undefined =
-                (req as any).user?.id ?? (req.body && req.body.id) ?? (req.params && req.params.id);
-
-            if (!userId) {
-                const authHeader = (req.headers.authorization || req.headers.Authorization) as string | undefined;
-                if (authHeader && authHeader.startsWith("Bearer ")) {
-                const token = authHeader.split(" ")[1];
-                const payload = AuthService.verifyToken(token);
-                if (payload) userId = payload.sub ?? (payload.userId as string | undefined);
-                }
+            const userId = (req as any).user.id;
+            const user = await prisma.users.findUnique({ where: { id: userId } });
+            
+            if (user?.profile_picture) {
+                const urlParts = user.profile_picture.split('/');
+                const uploadIndex = urlParts.indexOf('upload');
+                const publicId = urlParts.slice(uploadIndex + 2).join('/').split('.')[0];
+                await cloudinary.uploader.destroy(publicId);
             }
-
-            if (!userId) {
-                res.status(400).json({ message: "User id required (body.id, params.id or Bearer token)" });
-                return;
-            }
-
+            
             await prisma.users.delete({ where: { id: userId } });
             res.status(200).json({ message: "Account deleted" });
         } catch (err) {
             res.status(500).json({ message: "Deletion failed", error: String(err) });
         }
-
     }
 }

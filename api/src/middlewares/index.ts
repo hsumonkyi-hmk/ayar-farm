@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AuthService } from '../services/auth';
 
 export const logger = (req: Request, res: Response, next: NextFunction) => {
     console.log(`${req.method} ${req.url}`);
@@ -41,4 +42,24 @@ export const validateRequestBody = (requiredFields: string[]) => {
             next();
         }
     };
+};
+
+export const authenticate = (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader?.startsWith('Bearer ')) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+    }
+
+    const token = authHeader.split(' ')[1];
+    const payload = AuthService.verifyToken(token);
+    
+    if (!payload) {
+        res.status(401).json({ message: 'Invalid token' });
+        return;
+    }
+
+    (req as any).user = { id: payload.sub, user_type: payload.user_type };
+    next();
 };

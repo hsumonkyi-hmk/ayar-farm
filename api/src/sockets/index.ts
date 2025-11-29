@@ -2,6 +2,8 @@ import { Server, Socket } from "socket.io";
 import { prisma } from "../prisma/client";
 import jwt from "jsonwebtoken";
 
+const onlineUsers = new Map<string, string>(); // userId -> socketId
+
 export function registerSocketHandlers(io: Server) {
   io.on("connection", async (socket: Socket) => {
     console.log("socket connected:", socket.id);
@@ -31,6 +33,8 @@ export function registerSocketHandlers(io: Server) {
           socket.join(`user:${user.id}`);
           socket.data.user = { id: user.id, user_type: user.user_type };
           if (user.user_type === "ADMIN") socket.join("admins");
+          onlineUsers.set(user.id, socket.id);
+          io.to("admins").emit("user-online", user.id);
           socket.emit("socket:auth:ok", { id: user.id, user_type: user.user_type });
         } else if (providedType) {
           socket.data.user = { id: userId, user_type: providedType };
@@ -63,9 +67,18 @@ export function registerSocketHandlers(io: Server) {
       cb?.({ ok: true });
     });
 
+    socket.on("get-online-users", () => {
+      socket.emit("online-users", Array.from(onlineUsers.keys()));
+    });
+
     socket.on("ping", (cb) => cb?.({ ok: true, time: Date.now() }));
 
     socket.on("disconnect", (reason) => {
+      const user = socket.data.user;
+      if (user?.id) {
+        onlineUsers.delete(user.id);
+        io.to("admins").emit("user-offline", user.id);
+      }
       console.log("socket disconnected:", socket.id, reason);
     });
   });

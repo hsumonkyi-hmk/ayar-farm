@@ -1,0 +1,31 @@
+export const USER_TYPES = {
+  ADMIN: 'ADMIN',
+  FARMER: 'FARMER',
+  AGRICULTURAL_SPECIALIST: 'AGRICULTURAL_SPECIALIST',
+  AGRICULTURAL_EQUIPMENT_SHOP: 'AGRICULTURAL_EQUIPMENT_SHOP',
+  TRADER_VENDOR: 'TRADER_VENDOR',
+  LIVESTOCK_BREEDER: 'LIVESTOCK_BREEDER',
+  LIVESTOCK_SPECIALIST: 'LIVESTOCK_SPECIALIST',
+  OTHERS: 'OTHERS',
+} as const;
+
+export const USER_TYPE_LABELS = {
+  [USER_TYPES.ADMIN]: 'Admin',
+  [USER_TYPES.FARMER]: 'Farmer',
+  [USER_TYPES.AGRICULTURAL_SPECIALIST]: 'Agricultural Specialist',
+  [USER_TYPES.AGRICULTURAL_EQUIPMENT_SHOP]: 'Agricultural Equipment Shop',
+  [USER_TYPES.TRADER_VENDOR]: 'Trader/Vendor',
+  [USER_TYPES.LIVESTOCK_BREEDER]: 'Livestock Breeder',
+  [USER_TYPES.LIVESTOCK_SPECIALIST]: 'Livestock Specialist',
+  [USER_TYPES.OTHERS]: 'Others',
+} as const;
+
+export const USER_TYPE_LABELS_MM = {
+  [USER_TYPES.FARMER]: 'တောင်သူလယ်သမား',
+  [USER_TYPES.AGRICULTURAL_SPECIALIST]: 'စိုက်ပျိုးရေးပညာရှင်',
+  [USER_TYPES.AGRICULTURAL_EQUIPMENT_SHOP]: 'စိုက်ပျိုးရေးပစ္စည်းအရောင်းဆိုင်',
+  [USER_TYPES.TRADER_VENDOR]: 'ကုန်သည်/ပွဲရုံ',
+  [USER_TYPES.LIVESTOCK_BREEDER]: 'မွေးမြူရေးလုပ်ကိုင်သူ',
+  [USER_TYPES.LIVESTOCK_SPECIALIST]: 'မွေးမြူရေးပညာရှင်',
+  [USER_TYPES.OTHERS]: 'အခြား',
+} as const;

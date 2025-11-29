@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import Twilio from "twilio";
 import nodemailer from "nodemailer";
 import { prisma } from "../prisma/client";
+import { otpEmailTemplate } from "../templates/otp-email";
 
 export class AuthService {
     private static twilioClient: ReturnType<typeof Twilio> | null = null;
@@ -54,75 +55,6 @@ export class AuthService {
         }
     }
 
-    //     /**
-    //  * Send OTP using Twilio Verify (preferred) or fallback to plain SMS when
-    //  * you need a custom friendly name/message. Configure behavior via .env:
-    //  * - TWILIO_VERIFY_SERVICE_SID => use Verify API (no custom friendly name)
-    //  * - TWILIO_CUSTOM_FRIENDLY_NAME => forces SMS fallback and injects this name into the message body
-    //  * - TWILIO_MESSAGING_SERVICE_SID => optional, use messaging service instead of from number
-    //  * - TWILIO_FROM_NUMBER => fallback sender number (E.164)
-    //  */
-    // public static async sendOTP(phoneNumber: string): Promise<boolean> {
-    //     const client = this.getTwilioClient();
-    //     if (!client) {
-    //         console.warn("Twilio not configured (missing ACCOUNT SID / AUTH TOKEN).");
-    //         return false;
-    //     }
-
-    //     const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
-    //     const customFriendly = process.env.TWILIO_CUSTOM_FRIENDLY_NAME;
-    //     const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-    //     const fromNumber = process.env.TWILIO_FROM_NUMBER;
-
-    //     if (serviceSid && !customFriendly) {
-    //         try {
-    //             await client.verify.v2.services(serviceSid)
-    //                 .verifications
-    //                 .create({ to: phoneNumber, channel: "sms" });
-    //             return true;
-    //         } catch (err: any) {
-    //             console.error("Twilio Verify send failed:", err);
-    //             throw { message: err.message ?? 'Twilio Verify error', code: err.code, status: err.status, moreInfo: err.moreInfo };
-    //         }
-    //     }
-
-    //     if (!messagingServiceSid && !fromNumber) {
-    //         console.warn("SMS fallback not configured (missing TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM_NUMBER).");
-    //         return false;
-    //     }
-
-    //     const otp = this.generateOTP();
-    //     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
-    //     try {
-    //         await prisma.users.update({
-    //             where: { phone_number: phoneNumber },
-    //             data: {
-    //                 verificationToken: otp,
-    //                 verificationTokenExpiresAt: expiresAt,
-    //             },
-    //         });
-    //     } catch (err) {
-    //         console.error("Failed to store OTP in database:", err);
-    //         throw { message: 'DB update failed', details: String(err) };
-    //     }
-
-    //     const friendly = (process.env.TWILIO_CUSTOM_FRIENDLY_NAME ?? "Ayar Farm").replace(/^'|'$/g, '');
-    //     const body = `${friendly} verification code: ${otp}`;
-
-    //     try {
-    //         const createParams: any = { to: phoneNumber, body };
-    //         if (messagingServiceSid) createParams.messagingServiceSid = messagingServiceSid;
-    //         else createParams.from = fromNumber;
-
-    //         await client.messages.create(createParams);
-    //         return true;
-    //     } catch (err: any) {
-    //         console.error("Twilio SMS fallback send failed:", err);
-    //         throw { message: err.message ?? 'Twilio SMS error', code: err.code, status: err.status, moreInfo: err.moreInfo };
-    //     }
-    // }
-
     /**
      * Verify an OTP code previously sent via Twilio Verify.
      * Returns true if code is valid.
@@ -157,10 +89,10 @@ export class AuthService {
         });
 
         const mailOptions = {
-            from: process.env.EMAIL_USERNAME,
+            from: process.env.EMAIL_FROM_NAME,
             to: toEmail,
             subject: 'AyarFarm Link MSME - Account Verification',
-            text: `Your AyarFarm Link MSME verification code is: ${otp}. This code will expire in 10 minutes.`,
+            html: otpEmailTemplate(otp),
         };
 
         try {
