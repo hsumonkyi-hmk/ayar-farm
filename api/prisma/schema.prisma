@@ -53,6 +53,8 @@ model Users {
   isVerified                 Boolean   @default(false)
   verificationToken          String?
   verificationTokenExpiresAt DateTime?
+  resetPasswordToken         String?
+  resetPasswordExpiresAt     DateTime?
 
   last_login DateTime @default(now())
   created_at DateTime @default(now())

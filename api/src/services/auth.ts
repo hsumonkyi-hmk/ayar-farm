@@ -113,4 +113,40 @@ export class AuthService {
         
         return user.verificationTokenExpiresAt > new Date();
     }
+
+    public static async sendResetEmail(toEmail: string, otp: string): Promise<boolean> {
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: Number(process.env.EMAIL_PORT),
+            secure: process.env.EMAIL_USE_TLS === 'true',
+            auth: {
+                user: process.env.EMAIL_USERNAME,
+                pass: process.env.EMAIL_PASSWORD,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_FROM_NAME,
+            to: toEmail,
+            subject: 'AyarFarm Link MSME - Reset your AyarFarm password',
+            html: otpEmailTemplate(otp),
+        };
+
+        try {
+            await transporter.sendMail(mailOptions);
+            return true;
+        } catch (err) {
+            console.error("Email send failed:", err);
+            return false;
+        }
+    }
+
+    public static async verifyResetOTPEmail(email: string, otp: string): Promise<boolean> {
+        const user = await prisma.users.findFirst({
+            where: { email, resetPasswordToken: otp },
+        });
+        if (!user || !user.resetPasswordExpiresAt) return false;
+        
+        return user.resetPasswordExpiresAt > new Date();
+    }
 }

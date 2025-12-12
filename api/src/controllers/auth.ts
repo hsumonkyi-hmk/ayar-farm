@@ -216,6 +216,73 @@ export class AuthController {
         }
     }
 
+    public async forgetPassword(req: Request, res: Response): Promise<void>{
+        const { phone_number, email } = req.body;
+        if (!phone_number && !email) {
+            res.status(400).json({ message: 'phone_number or email is required' });
+            return;
+        }
+
+        const user = await prisma.users.findFirst({ where: email ? { email } : { phone_number } });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' }); 
+            return;
+        }
+
+        let otp: string | null = null;
+        if (email) {
+            otp = generateOTP();
+            const expires = new Date();
+            expires.setMinutes(expires.getMinutes() + 10);
+            await prisma.users.update({
+                where: { id: user.id },
+                data: { resetPasswordToken: otp, resetPasswordExpiresAt: expires }
+            });
+        }
+
+        const isSend = email ? await AuthService.sendResetEmail(email, otp!) : await AuthService.sendOTP(phone_number);
+
+        if (!isSend) {
+            res.send(500).json({ message: 'Failed to send reset code' });
+            return;
+        }
+
+        res.status(200).json({ message: 'Reset code sent' });
+    }
+
+    public async resetPassword(req: Request, res: Response): Promise<void> {
+        const { phone_number, email, code, new_password } = req.body;
+        if (!phone_number && !email || !code || !new_password) {
+            res.status(400).json({ message: 'phone_number or email, code and new_passwod are required' });
+            return;
+        }
+
+        const user = await prisma.users.findFirst({ where: email ? { email } : { phone_number } });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' }); 
+            return;
+        }
+
+        const isValid = email ? await AuthService.verifyResetOTPEmail(email, code) : await AuthService.verifyOTP(phone_number, code);
+
+        if (!isValid) {
+            res.status(400).json({ message: 'Invalid or expired code' });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(new_password, 10);
+        await prisma.users.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                resetPasswordToken: null,
+                resetPasswordExpiresAt: null
+            },
+        });
+
+        res.status(200).json({ message: 'Password reset successful' });
+    }
+
     public async accountDeletion(req: Request, res: Response): Promise<void> {
         try {
             const userId = (req as any).user.id;
