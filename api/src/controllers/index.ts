@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { emitToAdmins, emitToUser } from "../socket";
 import { Service } from '../services';
+import { prisma } from '../prisma/client';
 
 export class Controller {
     public async databaseTest(_req: Request, res: Response): Promise<void> {
@@ -17,8 +18,8 @@ export class Controller {
         try {
             emitToAdmins("notify:admin", payload);
             res.json({ ok: true });
-        } catch (err) {
-            res.status(500).json({ ok: false, error: String(err) });
+        } catch (error) {
+            res.status(500).json({ ok: false, error: String(error) });
         }
     }
 
@@ -28,8 +29,17 @@ export class Controller {
         try {
             emitToUser(targetId, "notify:user", payload);
             res.json({ ok: true });
-        } catch (err) {
-            res.status(500).json({ ok: false, error: String(err) });
+        } catch (error) {
+            res.status(500).json({ ok: false, error: String(error) });
+        }
+    }
+
+    public async deleteImages(req: Request, res: Response): Promise<void> {
+        const { id, tableName, imageUrls } = req.body;
+        try {
+            // const hasTableName = await prisma.
+        } catch (error) {
+            res.status(500).json({ ok: false, error: String(error) });
         }
     }
 }

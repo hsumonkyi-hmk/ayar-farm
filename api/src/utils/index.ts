@@ -1,3 +1,5 @@
+import { v2 as cloudinary } from 'cloudinary';
+
 export const formatDate = (date: Date, format: string): string => {
     const options: Intl.DateTimeFormatOptions = {
         year: 'numeric',
@@ -31,4 +33,51 @@ export const generateOTP = (length: number = 6): string => {
     .padStart(length, '0');
 };
 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
+const getPublicIdFromUrl = (url: string): string => {
+    try {
+        // Matches pattern like /v1234567890/folder/filename.ext
+        // Captures 'folder/filename'
+        const regex = /\/v\d+\/(.+)\.[a-z]+$/i;
+        const match = url.match(regex);
+        return match ? match[1] : url;
+    } catch (error) {
+        return url;
+    }
+};
+
+const deleteResource = async (urlOrPublicId: string, resourceType: 'image' | 'video' | 'raw' = 'image') => {
+    if (!urlOrPublicId) return;
+    
+    const publicId = getPublicIdFromUrl(urlOrPublicId);
+    
+    try {
+        const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+        console.log(`Deleted ${resourceType} (${publicId}):`, result.result);
+    } catch (error) {
+        console.error(`Error deleting ${resourceType} ${publicId}:`, error);
+    }
+};
+
+export const deleteImage = async (urls: string | string[]) => {
+    const list = Array.isArray(urls) ? urls : [urls];
+    if (list.length === 0) return;
+    await Promise.all(list.map(url => deleteResource(url, 'image')));
+};
+
+export const deleteVideo = async (urls: string | string[]) => {
+    const list = Array.isArray(urls) ? urls : [urls];
+    if (list.length === 0) return;
+    await Promise.all(list.map(url => deleteResource(url, 'video')));
+};
+
+export const deleteFile = async (urls: string | string[]) => {
+    const list = Array.isArray(urls) ? urls : [urls];
+    if (list.length === 0) return;
+    await Promise.all(list.map(url => deleteResource(url, 'raw')));
+};
