@@ -226,17 +226,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           decoration: InputDecoration(
             hintText: '+959...',
             hintStyle: const TextStyle(color: Color(0xFF7e9c81)),
-            prefixIcon: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('+95', style: TextStyle(color: Color(0xFF0e1e10), fontSize: 16)),
-                  const SizedBox(width: 4),
-                  Icon(Icons.arrow_drop_down, color: const Color(0xFF7e9c81)),
-                ],
-              ),
-            ),
+            // prefixIcon: Container(
+            //   padding: const EdgeInsets.symmetric(horizontal: 16),
+            //   child: Row(
+            //     mainAxisSize: MainAxisSize.min,
+            //     children: [
+            //       const Text('+95', style: TextStyle(color: Color(0xFF0e1e10), fontSize: 16)),
+            //       const SizedBox(width: 4),
+            //       Icon(Icons.arrow_drop_down, color: const Color(0xFF7e9c81)),
+            //     ],
+            //   ),
+            // ),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(

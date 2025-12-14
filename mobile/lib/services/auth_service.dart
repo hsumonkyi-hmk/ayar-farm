@@ -22,11 +22,13 @@ class AuthService {
   }
 
   static Future<AuthResponse> login({
-    required String phoneNumber,
+    String? phoneNumber,
+    String? email,
     required String password,
   }) async {
     final data = {
-      'phone_number': phoneNumber,
+      if (phoneNumber != null) 'phone_number': phoneNumber,
+      if (email != null) 'email': email,
       'password': password,
     };
     final response = await ApiService.post(ApiConstants.login, data);

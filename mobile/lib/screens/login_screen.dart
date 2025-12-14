@@ -11,13 +11,14 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _phoneController = TextEditingController();
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _loginType = 'phone';
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -28,20 +29,29 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       final response = await AuthService.login(
-        phoneNumber: _phoneController.text,
+        phoneNumber: _loginType == 'phone' ? _identifierController.text : null,
+        email: _loginType == 'email' ? _identifierController.text : null,
         password: _passwordController.text,
       );
       if (response.token != null) {
         ApiService.setToken(response.token);
-        // TODO: Save token to local storage
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login successful!')),
+          );
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(response.message ?? 'Login failed')),
+          );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: $e')),
+          const SnackBar(content: Text('An error occurred')),
         );
       }
     } finally {
@@ -76,14 +86,42 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 32),
+                      const Text('Login with', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => setState(() => _loginType = 'phone'),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: _loginType == 'phone' ? const Color(0xFF41BE02) : null,
+                                foregroundColor: _loginType == 'phone' ? Colors.white : null,
+                              ),
+                              child: const Text('Phone'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => setState(() => _loginType = 'email'),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: _loginType == 'email' ? const Color(0xFF41BE02) : null,
+                                foregroundColor: _loginType == 'email' ? Colors.white : null,
+                              ),
+                              child: const Text('Email'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone Number',
-                          hintText: '+959...',
-                          border: OutlineInputBorder(),
+                        controller: _identifierController,
+                        decoration: InputDecoration(
+                          labelText: _loginType == 'phone' ? 'Phone Number' : 'Email',
+                          hintText: _loginType == 'phone' ? '+959...' : 'm@example.com',
+                          border: const OutlineInputBorder(),
                         ),
-                        keyboardType: TextInputType.phone,
+                        keyboardType: _loginType == 'phone' ? TextInputType.phone : TextInputType.emailAddress,
                         validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),

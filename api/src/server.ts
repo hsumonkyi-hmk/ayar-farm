@@ -14,6 +14,6 @@ const server = http.createServer(app);
 const io = initSocket(server);
 registerSocketHandlers(io);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });

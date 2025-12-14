@@ -4,10 +4,41 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { USER_TYPES } from '@/constants/user';
-import { Download, BookOpen, DollarSign, Users, GraduationCap, MessageSquare, BarChart3, Star, Apple, Play } from 'lucide-react';
+import { Download, BookOpen, DollarSign, Users, GraduationCap, MessageSquare, BarChart3, Star, Apple, Play, Cloud, Droplets, Wind } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+interface WeatherData {
+  current: {
+    temperature: string;
+    location: string;
+    humidity: string;
+    wind: string;
+    status: string;
+  };
+}
 
 export default function Home() {
   const { user, isAuthenticated, logout } = useAuth();
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const res = await fetch(
+              `https://getweatherbycityapi.laziestant.tech/v2/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+            );
+            const data = await res.json();
+            setWeather(data);
+          } catch (error) {
+            console.error('Failed to fetch weather:', error);
+          }
+        },
+        (error) => console.error('Geolocation error:', error)
+      );
+    }
+  }, [isAuthenticated]);
 
   const handleDownload = (id: string, url: string) => {
     window.open(url, '_blank');
@@ -15,6 +46,32 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] to-[#f0f9ff]">
+      {/* Weather Section */}
+      {isAuthenticated && weather && (
+        <div className="bg-gradient-to-r from-[#53B154] to-[#4FC3F7] text-white py-4">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Cloud className="w-8 h-8" />
+                <div>
+                  <div className="text-2xl font-bold">{weather.current.temperature}°{weather.current.unit || 'C'}</div>
+                  <div className="text-sm opacity-90">{weather.current.status}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <Droplets className="w-5 h-5" />
+                  <span>{weather.current.humidity}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Wind className="w-5 h-5" />
+                  <span>{weather.current.wind}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hero Section - Full Height with Centered Items */}
       <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#53B154]/5 via-white to-[#4FC3F7]/5 flex items-center py-20">
         <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-5"></div>
