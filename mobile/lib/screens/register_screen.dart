@@ -15,11 +15,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   String _userType = UserTypes.farmer;
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -27,7 +25,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -82,12 +79,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Create Your Account',
+                        'Create Account',
                         style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0e1e10)),
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Start your journey in modern farming.',
+                        'Join AyarFarm community',
                         style: TextStyle(fontSize: 16, color: Color(0xFF7e9c81)),
                       ),
                     ],
@@ -100,8 +97,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       _buildTextField(
                         controller: _nameController,
-                        label: 'Full Name',
-                        hint: 'Enter your full name',
+                        label: 'Name',
+                        hint: 'Enter your name',
                         validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),
@@ -109,8 +106,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(height: 16),
                       _buildTextField(
                         controller: _emailController,
-                        label: 'Email Address',
-                        hint: 'Enter your email',
+                        label: 'Email (Optional)',
+                        hint: 'm@example.com',
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 16),
@@ -123,43 +120,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),
-                      _buildPasswordField(
-                        controller: _confirmPasswordController,
-                        label: 'Confirm Password',
-                        hint: 'Confirm your password',
-                        obscure: _obscureConfirmPassword,
-                        onToggle: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                        validator: (v) => v != _passwordController.text ? 'Passwords do not match' : null,
-                      ),
-                      const SizedBox(height: 16),
                       _buildDropdown(),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'By signing up, you agree to our ',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF7e9c81)),
-                      children: [
-                        TextSpan(
-                          text: 'Terms of Service',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: const Color(0xFF13ec25).withOpacity(0.8)),
-                        ),
-                        const TextSpan(text: ' and '),
-                        TextSpan(
-                          text: 'Privacy Policy',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: const Color(0xFF13ec25).withOpacity(0.8)),
-                        ),
-                        const TextSpan(text: '.'),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(
@@ -175,7 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       child: _isLoading
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                          : const Text('Register', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ),
@@ -189,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: const TextStyle(fontSize: 14, color: Color(0xFF7e9c81)),
                         children: [
                           TextSpan(
-                            text: 'Log In',
+                            text: 'Sign in',
                             style: TextStyle(fontWeight: FontWeight.w600, color: const Color(0xFF13ec25).withOpacity(0.8)),
                           ),
                         ],
@@ -259,7 +224,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           keyboardType: TextInputType.phone,
           validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
           decoration: InputDecoration(
-            hintText: '9xxxxxxxxx',
+            hintText: '+959...',
             hintStyle: const TextStyle(color: Color(0xFF7e9c81)),
             prefixIcon: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),

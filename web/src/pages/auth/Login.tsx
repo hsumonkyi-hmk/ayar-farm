@@ -20,7 +20,7 @@ export default function Login() {
     e.preventDefault();
     try {
       const res = await authService.login({ 
-        phone_number: loginType === 'phone' ? identifier : '', 
+        ...(loginType === 'phone' ? { phone_number: identifier } : { email: identifier }),
         password 
       });
       if (res.data) {

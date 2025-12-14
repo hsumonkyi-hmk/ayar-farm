@@ -77,39 +77,53 @@ export class AuthController {
     }
 
     public async login(req: Request, res: Response): Promise<void> {
-        const { phone_number, email, password } = req.body;
-        const user = await prisma.users.findUnique({ where: { phone_number, email } });
+        try {
+            const { phone_number, email, password } = req.body;
 
-        if (!user) {
-            res.status(404).json({ message: 'User not found' });
-            return;
+            if (!phone_number && !email) {
+                res.status(400).json({ message: 'Phone number or email is required' });
+                return;
+            }
+
+            let user;
+            if (phone_number) {
+                user = await prisma.users.findUnique({ where: { phone_number } });
+            } else if (email) {
+                user = await prisma.users.findUnique({ where: { email } });
+            }
+
+            if (!user) {
+                res.status(404).json({ message: 'User not found' });
+                return;
+            }
+            
+            const isValidPassword = await bcrypt.compare(password, user.password);
+            const isVerified = user.isVerified;
+
+            if (!isVerified) {
+                res.status(403).json({ message: 'Account not verified. Please verify your account before logging in.' });
+                return;
+            }
+
+            if (isValidPassword && isVerified) {
+                // Generate JWT token
+                const token = AuthService.generateToken(user.id, user.user_type);
+
+                await prisma.users.update({
+                    where: { id: user.id },
+                    data: { last_login: new Date() },
+                });
+
+                // return user data without password
+                const { password: _pwd, ...userWithoutPassword } = user;
+                res.status(200).json({ message: 'Login successful', data: { user: userWithoutPassword, token } });
+            } else {
+                res.status(401).json({ message: 'Invalid credentials' });
+            }
+        } catch (error) {
+            res.status(500).json({ message: `Login failed: ${error}` });
+            console.error("Login error:", error);
         }
-        
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        const isVerified = user.isVerified;
-
-        if (!isVerified) {
-            res.status(403).json({ message: 'Account not verified. Please verify your account before logging in.' });
-            return;
-        }
-
-        if (isValidPassword && isVerified) {
-            // Generate JWT token
-            const token = AuthService.generateToken(user.id, user.user_type);
-
-            await prisma.users.update({
-                where: { id: user.id },
-                data: { last_login: new Date() },
-            });
-
-            // return user data without password
-            const { password: _pwd, ...userWithoutPassword } = user;
-            res.status(200).json({ message: 'Login successful', data: { user: userWithoutPassword, token } });
-            return;
-        }
-
-        res.status(401).json({ message: 'Invalid credentials' });
-        return;
     }
 
     public async verify(req: Request, res: Response): Promise<void> {
