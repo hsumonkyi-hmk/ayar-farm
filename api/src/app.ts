@@ -7,6 +7,7 @@ import routes from "./routes";
 import auth from "./routes/auth";
 import users from "./routes/users";
 import crop from "./routes/crop";
+import livestock from "./routes/livestock";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(cookieParser());
 app.use("/api", routes);
 app.use("/api/auth", auth);
 app.use("/api/users", users);
-app.use("/api/cropsandpulses", crop)
+app.use("/api/cropsandpulses", crop);
+app.use("/api/livestockindustry", livestock)
 
 export default app;

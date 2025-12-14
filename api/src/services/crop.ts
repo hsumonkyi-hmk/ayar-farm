@@ -2,14 +2,14 @@ import { prisma } from "../prisma/client";
 import { deleteImage } from "../utils";
 
 export class CropService {
-    public static async getAllCropTypes(): Promise<{message: string, cropTypes: any}> {
+    public static async getAllCropTypes(): Promise<{ cropTypes: any}> {
         try {
             const cropTypes = await prisma.cropTypes.findMany({
                 orderBy: { created_at: 'desc' },
                 include: { crops: true },
             })
 
-            return { message: "Get all crop types successful", cropTypes };
+            return { cropTypes };
         } catch (error) {
             throw new Error(`Database query failed: ${String(error)}`);
         }

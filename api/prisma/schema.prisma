@@ -85,7 +85,7 @@ model LivestockTypes {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  Livestocks Livestocks[] @relation("LivestockTypeToLivestock")
+  livestocks Livestocks[] @relation("LivestockTypeToLivestock")
   documents  Documents[]  @relation("LivestockTypeToDocuments")
 }
 
