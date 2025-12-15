@@ -8,6 +8,7 @@ import auth from "./routes/auth";
 import users from "./routes/users";
 import crop from "./routes/crop";
 import livestock from "./routes/livestock";
+import machine from "./routes/machine";
 
 const app = express();
 
@@ -25,5 +26,6 @@ app.use("/api/auth", auth);
 app.use("/api/users", users);
 app.use("/api/cropsandpulses", crop);
 app.use("/api/livestockindustry", livestock)
+app.use("/api/agriindustry", machine)
 
 export default app;

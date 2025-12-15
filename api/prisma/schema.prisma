@@ -99,7 +99,7 @@ model MachineTypes {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  Machines  Machines[]  @relation("MachineTypeToMachines")
+  machines  Machines[]  @relation("MachineTypeToMachines")
   documents Documents[] @relation("MachineTypeToDocuments")
 }
 
