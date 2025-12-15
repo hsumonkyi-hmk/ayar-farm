@@ -1,0 +1,93 @@
+import { prisma } from "../prisma/client";
+import { deleteFile } from "../utils";
+
+export class DocumentService {
+    public static async getAllDocuments(): Promise<{ documents: any }> {
+        try {
+            const documents = await prisma.documents.findMany({
+                orderBy: { created_at: 'desc' }
+            })
+
+            return { documents }
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
+    public static async getDocumentById(id: string): Promise<{ document: any }> {
+        try {
+            const document = await prisma.documents.findUnique({
+                where: { id }
+            });
+
+            return { document };
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
+    public static async addNewDocument(title: string, author: string, file_urls: string[], crop_type_id: string, livestock_type_id: string, machine_type_id: string, crop_id: string, livestock_id: string, machine_id: string, fish_id: string ): Promise<{ document: any }> {
+        try {
+            const document = await prisma.documents.create({
+                data: {
+                    title,
+                    author,
+                    file_urls,
+                    crop_type_id,
+                    livestock_type_id,
+                    machine_type_id,
+                    crop_id,
+                    livestock_id,
+                    machine_id,
+                    fish_id
+                }
+            })
+
+            return { document };
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
+    public static async updateDocument(id: string, title: string, author: string, file_urls: string[], crop_type_id: string, livestock_type_id: string, machine_type_id: string, crop_id: string, livestock_id: string, machine_id: string, fish_id: string ): Promise<{ document: any }> {
+        try {
+            const document = await prisma.documents.update({
+                where: { id },
+                data: {
+                    title,
+                    author,
+                    file_urls,
+                    crop_type_id,
+                    livestock_type_id,
+                    machine_type_id,
+                    crop_id,
+                    livestock_id,
+                    machine_id,
+                    fish_id
+                }
+            })
+
+            return { document };
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
+    public static async deleteDocuments(ids: string[]): Promise<void> {
+        try {
+            for (const documentId of ids) {
+                const document = await prisma.documents.findUnique({
+                    where: { id: documentId },
+                });
+                if (document) {
+                    await deleteFile(document.file_urls);
+                    await prisma.documents.delete({
+                        where: { id: documentId },
+                    });
+                }
+            }
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+}
