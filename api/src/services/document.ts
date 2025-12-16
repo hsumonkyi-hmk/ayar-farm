@@ -33,13 +33,13 @@ export class DocumentService {
                     title,
                     author,
                     file_urls,
-                    crop_type_id,
-                    livestock_type_id,
-                    machine_type_id,
-                    crop_id,
-                    livestock_id,
-                    machine_id,
-                    fish_id
+                    crop_type_id: crop_type_id || null,
+                    livestock_type_id: livestock_type_id || null,
+                    machine_type_id: machine_type_id || null,
+                    crop_id: crop_id || null,
+                    livestock_id: livestock_id || null,
+                    machine_id: machine_id || null,
+                    fish_id: fish_id || null
                 }
             })
 
@@ -57,13 +57,13 @@ export class DocumentService {
                     title,
                     author,
                     file_urls,
-                    crop_type_id,
-                    livestock_type_id,
-                    machine_type_id,
-                    crop_id,
-                    livestock_id,
-                    machine_id,
-                    fish_id
+                    crop_type_id: crop_type_id || null,
+                    livestock_type_id: livestock_type_id || null,
+                    machine_type_id: machine_type_id || null,
+                    crop_id: crop_id || null,
+                    livestock_id: livestock_id || null,
+                    machine_id: machine_id || null,
+                    fish_id: fish_id || null
                 }
             })
 

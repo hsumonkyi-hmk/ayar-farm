@@ -38,6 +38,13 @@ enum Gender {
   OTHER
 }
 
+enum ResourceType {
+  ARTICLE
+  AGROMET_BULLETIN
+  VIDEO
+  APPLICATION
+}
+
 model Users {
   id           String   @id @unique @default(uuid())
   name         String
@@ -198,4 +205,28 @@ model Documents {
   @@index([livestock_id])
   @@index([machine_id])
   @@index([fish_id])
+}
+
+model Resources {
+  id   String       @id @unique @default(uuid())
+  type ResourceType
+
+  title       String
+  content     String?
+  description String?
+  author      String?
+
+  resource_url String[]
+  image_url    String[]
+
+  filename String?
+  size     Int?
+
+  version        String?
+  platform       String?
+  download_count Int?    @default(0)
+
+  is_active   Boolean   @default(false)
+  uploaded_at DateTime? @default(now())
+  created_at  DateTime  @default(now())
 }

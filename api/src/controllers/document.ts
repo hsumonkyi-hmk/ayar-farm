@@ -56,7 +56,7 @@ export class DocumentController {
             }
                 
             const newFileUrls = files ? files.map((file) => file.path) : [];
-            const file_urls = [...existingDocument!.image_urls, ...newFileUrls];
+            const file_urls = [...existingDocument!.file_urls, ...newFileUrls];
                 
             const updatedDocument = (await DocumentService.updateDocument(id, title, author, file_urls, crop_type_id, livestock_type_id, machine_type_id, crop_id, livestock_id, machine_id, fish_id));
     
