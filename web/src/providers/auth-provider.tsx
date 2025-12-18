@@ -10,10 +10,10 @@ type AuthContextType = {
   user: any;
   session: any;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (identifier: string, password: string) => Promise<void>;
   signUp: (data: any) => Promise<void>;
   signOut: () => Promise<void>;
-  confirmation: (code: string, email?: string) => Promise<void>;
+  confirmation: (code: string, identifier?: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,10 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (identifier: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await api.post("/auth/login", { email, password });
+      const isEmail = identifier.includes("@");
+      const payload = isEmail
+        ? { email: identifier, password }
+        : { phone_number: identifier, password };
+
+      const response = await api.post("/auth/login", payload);
       const { user, token } = response.data;
 
       setUser(user);
@@ -75,7 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await api.post("/auth/register", data);
 
       if (data.email) {
-        localStorage.setItem("pending_confirmation_email", data.email);
+        localStorage.setItem("pending_confirmation_identifier", data.email);
+      } else if (data.phone_number) {
+        localStorage.setItem(
+          "pending_confirmation_identifier",
+          data.phone_number
+        );
       }
 
       toast.success("Registration successful", {
@@ -111,29 +121,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const confirmation = async (code: string, email?: string) => {
+  const confirmation = async (code: string, identifier?: string) => {
     setIsLoading(true);
     try {
-      const targetEmail =
-        email ||
-        localStorage.getItem("pending_confirmation_email") ||
-        user?.email;
+      const targetIdentifier =
+        identifier ||
+        localStorage.getItem("pending_confirmation_identifier") ||
+        user?.email ||
+        user?.phone_number;
 
-      if (!targetEmail) {
-        throw new Error("Email is required for verification");
+      if (!targetIdentifier) {
+        throw new Error("Email or Phone number is required for verification");
       }
 
-      const response = await api.post("/auth/verify", {
-        email: targetEmail,
-        code,
-      });
+      const isEmail = targetIdentifier.includes("@");
+      const payload = isEmail
+        ? { email: targetIdentifier, code }
+        : { phone_number: targetIdentifier, code };
+
+      const response = await api.post("/auth/verify", payload);
       const { user: verifiedUser, token } = response.data;
 
       setUser(verifiedUser);
       setSession({ user: verifiedUser, access_token: token });
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(verifiedUser));
-      localStorage.removeItem("pending_confirmation_email");
+      localStorage.removeItem("pending_confirmation_identifier");
 
       toast.success("Verification successful");
       router.navigate({ to: "/auth/success" });

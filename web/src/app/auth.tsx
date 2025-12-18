@@ -284,55 +284,57 @@ const AuthSuccess = () => {
 const AuthError = () => {
   const router = useRouter();
   const [isResending, setIsResending] = useState(false);
-  const [manualEmail, setManualEmail] = useState("");
-  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [manualIdentifier, setManualIdentifier] = useState("");
+  const [showInput, setShowInput] = useState(false);
 
   const handleResendConfirmation = async () => {
     setIsResending(true);
     try {
-      // Try multiple sources to get the email
-      let email =
-        manualEmail || localStorage.getItem("pending_confirmation_email");
+      // Try multiple sources to get the identifier
+      let identifier =
+        manualIdentifier ||
+        localStorage.getItem("pending_confirmation_identifier");
 
       // If not in localStorage, try to get from URL parameters
-      if (!email) {
+      if (!identifier) {
         const urlParams = new URLSearchParams(window.location.search);
-        email = urlParams.get("email");
+        identifier = urlParams.get("email") || urlParams.get("phone_number");
       }
 
       // If still not found, try to get from hash parameters (for mobile app redirects)
-      if (!email) {
+      if (!identifier) {
         const hashParams = new URLSearchParams(
           window.location.hash.substring(1)
         );
-        email = hashParams.get("email");
+        identifier = hashParams.get("email") || hashParams.get("phone_number");
       }
 
       // If still not found, try to get from sessionStorage
-      if (!email) {
-        email =
-          sessionStorage.getItem("signup_email") ||
-          sessionStorage.getItem("pending_confirmation_email");
+      if (!identifier) {
+        identifier =
+          sessionStorage.getItem("signup_identifier") ||
+          sessionStorage.getItem("pending_confirmation_identifier");
       }
 
-      if (!email) {
-        setShowEmailInput(true);
-        toast.error(
-          "အီးမေးလ်လိပ်စာ လိုအပ်ပါသည်။ ကျေးဇူးပြု၍ သင့်အီးမေးလ်ကို ရိုက်ထည့်ပါ။"
-        );
+      if (!identifier) {
+        setShowInput(true);
+        toast.error("အီးမေးလ် သို့မဟုတ် ဖုန်းနံပါတ် လိုအပ်ပါသည်။");
         return;
       }
 
-      await api.post("/resend-otp", { email });
+      const isEmail = identifier.includes("@");
+      const payload = isEmail
+        ? { email: identifier }
+        : { phone_number: identifier };
 
-      // Save email for future use
-      localStorage.setItem("pending_confirmation_email", email);
-      sessionStorage.setItem("pending_confirmation_email", email);
+      await api.post("/auth/resend-otp", payload);
 
-      toast.success(
-        `အတည်ပြုလင့်အသစ် ${email} သို့ ပို့ပြီးပါပြီ။ သင့်အီးမေးလ်ကို စစ်ဆေးပါ။`
-      );
-      setShowEmailInput(false);
+      // Save identifier for future use
+      localStorage.setItem("pending_confirmation_identifier", identifier);
+      sessionStorage.setItem("pending_confirmation_identifier", identifier);
+
+      toast.success(`အတည်ပြုကုဒ် ${identifier} သို့ ပို့ပြီးပါပြီ။`);
+      setShowInput(false);
     } catch (error: any) {
       console.error("Resend error:", error);
 
@@ -341,8 +343,8 @@ const AuthError = () => {
         toast.error(
           "အတည်ပြုလင့်ပို့မှု များလွန်းပါသည်။ ၅ မိနစ်အကြာတွင် ပြန်လည်ကြိုးစားပါ။"
         );
-      } else if (error?.message?.includes("email_not_confirmed")) {
-        toast.error("ဤအီးမေးလ်သည် မည်သည့်အကောင့်နှင့်မျှ ချိတ်ဆက်မထားပါ။");
+      } else if (error?.message?.includes("not_found")) {
+        toast.error("ဤအချက်အလက်နှင့် မည်သည့်အကောင့်မျှ မရှိပါ။");
       } else {
         toast.error(
           "လင့်ပို့မှုမအောင်မြင်ပါ။ အင်တာနက်ချိတ်ဆက်မှုကို စစ်ဆေးပြီး ပြန်လည်ကြိုးစားပါ။"
@@ -405,11 +407,11 @@ const AuthError = () => {
                   <ul className="text-sm text-orange-700 space-y-2">
                     <li className="flex items-start space-x-2">
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <span>အတည်ပြုလင့်၏ သက်တမ်းကုန်ပါပြီ (၂၄ နာရီ)</span>
+                      <span>အတည်ပြုကုဒ်၏ သက်တမ်းကုန်ပါပြီ (၁၀ မိနစ်)</span>
                     </li>
                     <li className="flex items-start space-x-2">
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <span>လင့်မမှန်ကန်ပါ သို့မဟုတ် ပျက်စီးနေပါသည်</span>
+                      <span>ကုဒ်မမှန်ကန်ပါ</span>
                     </li>
                     <li className="flex items-start space-x-2">
                       <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
@@ -428,30 +430,30 @@ const AuthError = () => {
 
             {/* Solutions Section */}
             <div className="space-y-4">
-              {/* Email Input Form */}
-              {showEmailInput && (
+              {/* Identifier Input Form */}
+              {showInput && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
                   <div className="text-center">
                     <h4 className="font-medium text-gray-800 text-sm">
-                      အီးမေးလ်လိပ်စာ ရိုက်ထည့်ပါ
+                      အီးမေးလ် သို့မဟုတ် ဖုန်းနံပါတ် ရိုက်ထည့်ပါ
                     </h4>
                     <p className="text-xs text-gray-600 mt-1">
-                      signup လုပ်ခဲ့သည့် အီးမေးလ်လိပ်စာကို ရိုက်ထည့်ပါ
+                      signup လုပ်ခဲ့သည့် အချက်အလက်ကို ရိုက်ထည့်ပါ
                     </p>
                   </div>
                   <div className="space-y-2">
                     <Label
-                      htmlFor="email"
+                      htmlFor="identifier"
                       className="text-sm font-medium text-gray-700"
                     >
-                      အီးမေးလ်လိပ်စာ
+                      အီးမေးလ် သို့မဟုတ် ဖုန်းနံပါတ်
                     </Label>
                     <Input
-                      id="email"
-                      type="email"
-                      placeholder="example@email.com"
-                      value={manualEmail}
-                      onChange={(e) => setManualEmail(e.target.value)}
+                      id="identifier"
+                      type="text"
+                      placeholder="email@example.com or +1234567890"
+                      value={manualIdentifier}
+                      onChange={(e) => setManualIdentifier(e.target.value)}
                       className="w-full"
                     />
                   </div>
@@ -461,7 +463,7 @@ const AuthError = () => {
               <div className="space-y-3">
                 <Button
                   onClick={handleResendConfirmation}
-                  disabled={isResending || (showEmailInput && !manualEmail)}
+                  disabled={isResending || (showInput && !manualIdentifier)}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 text-lg font-semibold shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:transform-none"
                   size="lg"
                 >
@@ -470,20 +472,20 @@ const AuthError = () => {
                   />
                   {isResending
                     ? "ပို့နေပါသည်..."
-                    : showEmailInput && !manualEmail
-                      ? "အီးမေးလ်ရိုက်ထည့်ပါ"
-                      : "အတည်ပြုလင့်အသစ်တောင်းခံမယ်"}
+                    : showInput && !manualIdentifier
+                      ? "အချက်အလက်ရိုက်ထည့်ပါ"
+                      : "အတည်ပြုကုဒ်အသစ်တောင်းခံမယ်"}
                 </Button>
 
-                {!showEmailInput && (
+                {!showInput && (
                   <Button
-                    onClick={() => setShowEmailInput(true)}
+                    onClick={() => setShowInput(true)}
                     variant="outline"
                     className="w-full py-3 border-2 border-orange-400 text-orange-600 hover:bg-orange-400 hover:text-white transition-all duration-200"
                     size="lg"
                   >
                     <Mail className="w-4 h-4 mr-2" />
-                    အီးမေးလ်ရိုက်ထည့်မယ်
+                    အီးမေးလ်/ဖုန်းနံပါတ် ရိုက်ထည့်မယ်
                   </Button>
                 )}
 
