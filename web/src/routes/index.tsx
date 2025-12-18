@@ -1,55 +1,18 @@
-import { createBrowserRouter } from 'react-router-dom';
-import { ProtectedRoute } from '../components/ProtectedRoute';
-import { AdminLayout } from '../components/layout/AdminLayout';
-import Home from '../pages/common/Home';
-import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
-import Verify from '../pages/auth/Verify';
-import Profile from '../pages/common/Profile';
-import AdminDashboard from '../pages/admin/AdminDashboard';
-import AdminUsers from '../pages/admin/AdminUsers';
+import { createFileRoute } from "@tanstack/react-router";
+import { useAuth } from "@/providers/auth-provider";
+import HomePage from "@/app/home";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Home />,
-  },
-  {
-    path: '/login',
-    element: <Login />,
-  },
-  {
-    path: '/register',
-    element: <Register />,
-  },
-  {
-    path: '/verify',
-    element: <Verify />,
-  },
-  {
-    path: '/profile',
-    element: (
-      <ProtectedRoute>
-        <Profile />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/admin',
-    element: (
-      <ProtectedRoute>
-        <AdminLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <AdminDashboard />,
-      },
-      {
-        path: 'users',
-        element: <AdminUsers />,
-      },
-    ],
-  },
-]);
+export const Route = createFileRoute("/")({
+  component: App,
+});
+
+function App() {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  return <HomePage />;
+}
