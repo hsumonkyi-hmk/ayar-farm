@@ -1,17 +1,17 @@
 import * as React from "react";
 import {
-  IconCamera,
+  IconVideo,
   IconWheat,
   // IconFileAi,
   // IconFileDescription,
-  IconEngine,
+  IconBulldozer,
   IconHelp,
   IconLeaf,
-  IconBuildingCottage,
+  IconMeat,
   IconSearch,
   IconSettings,
-  IconZodiacAquarius,
-  IconUser,
+  IconFishHook,
+  IconUsers,
   IconDeviceMobile,
   IconMessageCog,
 } from "@tabler/icons-react";
@@ -34,7 +34,7 @@ const data = {
   // navClouds: [
   //   {
   //     title: "Capture",
-  //     icon: IconCamera,
+  //     icon: IconVideo,
   //     isActive: true,
   //     url: "#",
   //     items: [
@@ -100,7 +100,7 @@ const data = {
     {
       name: "Users Management",
       url: "/admin/users",
-      icon: IconUser,
+      icon: IconUsers,
     },
     {
       name: "Chat Rooms Management",
@@ -110,7 +110,7 @@ const data = {
     {
       name: "Videos Management",
       url: "/admin/videos",
-      icon: IconCamera,
+      icon: IconVideo,
     },
     {
       name: "Applications",
@@ -127,17 +127,17 @@ const data = {
     {
       name: "Livestock",
       url: "/category/livestock",
-      icon: IconBuildingCottage,
+      icon: IconMeat,
     },
     {
       name: "Fisheries",
       url: "/category/fisheries",
-      icon: IconZodiacAquarius,
+      icon: IconFishHook,
     },
     {
       name: "Machine",
       url: "/category/machine",
-      icon: IconEngine,
+      icon: IconBulldozer,
     },
   ],
 };

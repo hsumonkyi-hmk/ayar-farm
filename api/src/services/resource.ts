@@ -105,6 +105,21 @@ export class ResourceService {
         }
     }
 
+    public static async downloadCountIncrease(id: string): Promise<void>{
+        try {
+            await prisma.resources.update({
+                where: { id },
+                data: {
+                    download_count: {
+                        increment: 1
+                    }
+                }
+            })
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
     public static async deleteResource(ids: string[]): Promise<void> {
         try {
             for (const resourceId of ids) {

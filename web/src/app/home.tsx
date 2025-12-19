@@ -39,7 +39,7 @@ interface Application {
   id: string;
   title: string;
   description: string;
-  app_url: string;
+  resource_url: string[];
   filename: string;
   size: number;
   version: string;
@@ -62,10 +62,6 @@ const HomePage = () => {
       );
 
       if (response?.resources) {
-        console.log(
-          "Fetched active video:",
-          response.resources
-        )
         setActiveVideo(response.resources);
       } else {
         console.log("No active video found");
@@ -79,17 +75,21 @@ const HomePage = () => {
 
   const fetchActiveApplications = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/applications/active`
+      const response = await api.get(
+        "/resources/resources?type=APPLICATION&isActive=true"
       );
-      if (response.ok) {
-        const data = await response.json();
-        setApplications(data.activeApplications || []);
+
+      if (response?.resources) {
+        // Handle both single object (from findFirst) and array (from findMany)
+        const resources = response.resources;
+        setApplications(Array.isArray(resources) ? resources : [resources]);
       } else {
         console.log("No active applications found");
+        setApplications([]);
       }
     } catch (error) {
       console.error("Error fetching active applications:", error);
+      setApplications([]);
     } finally {
       setAppsLoading(false);
     }
@@ -98,9 +98,7 @@ const HomePage = () => {
   const handleDownload = async (appId: string, appUrl: string) => {
     try {
       // Increment download count
-      await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/applications/${appId}/download`
-      );
+      await api.patch(`/resources/resources/${appId}`);
       // Open download link
       window.open(appUrl, "_blank");
     } catch (error) {
@@ -115,6 +113,7 @@ const HomePage = () => {
     fetchActiveApplications();
   }, []);
 
+  console.log("Active Video:", activeVideo, "Active Application", applications);
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8fffe] to-[#f0f9ff]">
       {/* Hero Section - Full Height with Centered Items */}
@@ -149,7 +148,9 @@ const HomePage = () => {
                     <Button
                       key={app.id}
                       size="lg"
-                      onClick={() => handleDownload(app.id, app.app_url)}
+                      onClick={() =>
+                        handleDownload(app.id, app.resource_url[0])
+                      }
                       className="bg-gradient-to-r from-[#53B154] to-[#4FC3F7] hover:from-[#388e3c] hover:to-[#0288d1] text-white px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
                     >
                       <Download className="mr-2 h-6 w-6" />
@@ -422,7 +423,7 @@ const HomePage = () => {
                   <Button
                     key={app.id}
                     size="lg"
-                    onClick={() => handleDownload(app.id, app.app_url)}
+                    onClick={() => handleDownload(app.id, app.resource_url[0])}
                     className={`px-10 py-6 text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 ${
                       app.platform === "ios"
                         ? "bg-white text-[#53B154] hover:bg-gray-100"

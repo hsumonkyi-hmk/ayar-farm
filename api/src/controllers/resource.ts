@@ -117,6 +117,19 @@ export class ResourceController {
         }
     }
 
+    public async downloadCountIncrease(req: Request, res: Response): Promise<void>{
+        try {
+            const { id } = req.params;
+
+            await ResourceService.downloadCountIncrease(id);
+
+            res.status(200).json({ message: 'Resource(s) download count increase successfully' })
+        } catch (error) {
+            res.status(500).json({ message: `Error increasing download count for resource: ${error}` })
+            console.error("Error increasing download count for resource:", error)
+        }
+    }
+
     public async deleteResource(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;

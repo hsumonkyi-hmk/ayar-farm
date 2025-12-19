@@ -35,22 +35,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Trash2, Download, Upload, CheckCircle, RefreshCw } from "lucide-react";
 import {
-  Trash2,
-  Download,
-  Smartphone,
-  Monitor,
-  Apple,
-  Upload,
-  CheckCircle,
-} from "lucide-react";
+  IconBrandApple,
+  IconBrandWindows,
+  IconBrandAndroid,
+  IconBrandUbuntu,
+} from "@tabler/icons-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { getUserById } from "@/lib/utils";
 
 interface Application {
   id: string;
   title: string;
   description: string;
+  author: string;
   resource_url: string[];
   filename: string;
   size: number;
@@ -67,7 +67,8 @@ function ApplicationManagement() {
   const [, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [appToDelete, setAppToDelete] = useState<string | null>(null);
+  const [appToDelete, setAppToDelete] = useState<Application | null>(null);
+  const [togglingActive, setTogglingActive] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -79,16 +80,28 @@ function ApplicationManagement() {
     {
       value: "android",
       label: "Android",
-      icon: <Smartphone className="w-4 h-4" />,
+      icon: <IconBrandAndroid className="w-4 h-4" />,
     },
-    { value: "ios", label: "iOS", icon: <Apple className="w-4 h-4" /> },
+    {
+      value: "ios",
+      label: "iOS",
+      icon: <IconBrandApple className="w-4 h-4" />,
+    },
     {
       value: "windows",
       label: "Windows",
-      icon: <Monitor className="w-4 h-4" />,
+      icon: <IconBrandWindows className="w-4 h-4" />,
     },
-    { value: "macos", label: "macOS", icon: <Apple className="w-4 h-4" /> },
-    { value: "linux", label: "Linux", icon: <Monitor className="w-4 h-4" /> },
+    {
+      value: "macos",
+      label: "macOS",
+      icon: <IconBrandApple className="w-4 h-4" />,
+    },
+    {
+      value: "linux",
+      label: "Linux",
+      icon: <IconBrandUbuntu className="w-4 h-4" />,
+    },
   ];
 
   const fetchApplications = async () => {
@@ -105,6 +118,26 @@ function ApplicationManagement() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const AuthorDisplay = ({ authorId }: { authorId: string }) => {
+    const [name, setName] = useState("...");
+
+    useEffect(() => {
+      const fetchName = async () => {
+        try {
+          const response = await getUserById(authorId);
+          const userData = response.data || response;
+          setName(userData.name || "Unknown");
+        } catch (error) {
+          console.error("Error fetching author:", error);
+          setName("Unknown");
+        }
+      };
+      if (authorId) fetchName();
+    }, [authorId]);
+
+    return <span>{name}</span>;
   };
 
   useEffect(() => {
@@ -137,6 +170,7 @@ function ApplicationManagement() {
     uploadData.append("resource", selectedFile);
     uploadData.append("title", formData.title);
     uploadData.append("description", formData.description);
+    uploadData.append("author", user?.id);
     uploadData.append("version", formData.version || "1.0.0");
     uploadData.append("platform", formData.platform);
     uploadData.append("type", "APPLICATION");
@@ -169,9 +203,18 @@ function ApplicationManagement() {
   };
 
   const handleSetActive = async (appId: string) => {
+    setTogglingActive(appId);
     try {
       const formData = new FormData();
-      formData.append("is_active", "true");
+
+      const app = applications.find((a) => a.id === appId);
+      if (app?.author && app?.is_active == false) {
+        formData.append("is_active", "true");
+        formData.append("author", app.author);
+      } else if (app?.author && app?.is_active == true) {
+        formData.append("is_active", "false");
+        formData.append("author", app.author);
+      }
 
       const token = localStorage.getItem("token");
       await api.put(
@@ -185,6 +228,8 @@ function ApplicationManagement() {
     } catch (error) {
       console.error("Error setting active application:", error);
       toast.error("Failed to set active application");
+    } finally {
+      setTogglingActive(null);
     }
   };
 
@@ -194,8 +239,9 @@ function ApplicationManagement() {
     try {
       const token = localStorage.getItem("token");
       await api.delete(
-        `/resources/resources/${appToDelete}`,
-        token || undefined
+        `/resources/resources/${appToDelete.id}`,
+        token || undefined,
+        { author: appToDelete.author }
       );
 
       toast.success("Application deleted successfully!");
@@ -218,7 +264,7 @@ function ApplicationManagement() {
 
   const getPlatformIcon = (platform: string) => {
     const platformData = platforms.find((p) => p.value === platform);
-    return platformData?.icon || <Smartphone className="w-4 h-4" />;
+    return platformData?.icon || <IconBrandAndroid className="w-4 h-4" />;
   };
 
   const getPlatformColor = (platform: string) => {
@@ -413,15 +459,36 @@ function ApplicationManagement() {
                             Uploaded:{" "}
                             {new Date(app.uploaded_at).toLocaleDateString()}
                           </span>
+                          <span>
+                            Author: <AuthorDisplay authorId={app.author} />
+                          </span>
                         </div>
                       </div>
                       <div className="flex gap-2 ml-4">
-                        {!app.is_active && (
+                        {app.is_active ? (
                           <Button
                             onClick={() => handleSetActive(app.id)}
                             variant="outline"
                             size="sm"
+                            disabled={togglingActive === app.id}
                           >
+                            {togglingActive === app.id ? (
+                              <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                            )}
+                            Active
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleSetActive(app.id)}
+                            variant="outline"
+                            size="sm"
+                            disabled={togglingActive === app.id}
+                          >
+                            {togglingActive === app.id ? (
+                              <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                            ) : null}
                             Set Active
                           </Button>
                         )}
@@ -458,7 +525,7 @@ function ApplicationManagement() {
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => {
-                                  setAppToDelete(app.id);
+                                  setAppToDelete(app);
                                   confirmDelete();
                                 }}
                                 className="bg-red-500 hover:bg-red-600"

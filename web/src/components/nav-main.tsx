@@ -1,4 +1,4 @@
-import { type Icon, IconDashboardFilled } from "@tabler/icons-react";
+import { type Icon, IconApps } from "@tabler/icons-react";
 
 import {
   SidebarGroup,
@@ -38,7 +38,7 @@ export function NavMain({
                 router.navigate({ to: "/dashboard" });
               }}
             >
-              <IconDashboardFilled />
+              <IconApps />
               <span>Dashboard</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

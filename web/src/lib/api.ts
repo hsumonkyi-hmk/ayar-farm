@@ -53,6 +53,25 @@ export const api = {
     return handleResponse(response);
   },
 
+  async patch(endpoint: string, data?: any, token?: string) {
+    const isFormData = data instanceof FormData;
+    const headers: HeadersInit = {};
+    
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers,
+      body: isFormData ? data : JSON.stringify(data),
+    });
+    return handleResponse(response);
+  },
+
   async delete(endpoint: string, token?: string, data?: any) {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
