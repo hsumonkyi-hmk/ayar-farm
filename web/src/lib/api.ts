@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/auth';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export const api = {
   async get(endpoint: string, token?: string) {
@@ -16,36 +16,44 @@ export const api = {
   },
 
   async post(endpoint: string, data: any, token?: string) {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+    const isFormData = data instanceof FormData;
+    const headers: HeadersInit = {};
+    
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data),
     });
     return handleResponse(response);
   },
 
   async put(endpoint: string, data: any, token?: string) {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+    const isFormData = data instanceof FormData;
+    const headers: HeadersInit = {};
+    
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'PUT',
       headers,
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data),
     });
     return handleResponse(response);
   },
 
-  async delete(endpoint: string, token?: string) {
+  async delete(endpoint: string, token?: string, data?: any) {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -55,6 +63,7 @@ export const api = {
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'DELETE',
       headers,
+      body: data ? JSON.stringify(data) : undefined,
     });
     return handleResponse(response);
   },

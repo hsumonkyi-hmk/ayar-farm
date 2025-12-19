@@ -15,13 +15,27 @@ export class ResourceService {
         }
     }
 
-    public static async getAllResourcesByType(type: ResourceType): Promise<{ resources: any }> {
+    public static async getAllResourcesByType(type: ResourceType, is_active: boolean): Promise<{ resources: any }> {
         try {
-            const resources = await prisma.resources.findMany({
-                where: { type },
-                orderBy: { created_at: 'desc' }
-            })
-
+            let resources;
+            if (is_active) {
+                console.log(
+                    "Fetching resources with type:", type, "and is_active:", is_active
+                )
+                resources = await prisma.resources.findFirst({
+                    where: { type, is_active },
+                    orderBy: { created_at: 'desc' }
+                })
+            } else {
+                console.log(
+                    "Fetching resources with type:", type
+                )
+                resources = await prisma.resources.findMany({
+                    where: { type },
+                    orderBy: { created_at: 'desc' }
+                })  
+            }
+            
             return { resources }
         } catch (error) {
             throw new Error(`Database query failed: ${String(error)}`);

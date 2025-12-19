@@ -20,12 +20,13 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
 
 interface ActiveVideo {
   id: string;
   title: string;
   description: string;
-  video_url: string;
+  resource_url: string;
   filename: string;
   size: number;
   uploaded_at: string;
@@ -56,12 +57,16 @@ const HomePage = () => {
 
   const fetchActiveVideo = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/videos/active`
+      const response = await api.get(
+        "/resources/resources?type=VIDEO&isActive=true"
       );
-      if (response.ok) {
-        const data = await response.json();
-        setActiveVideo(data.activeVideo);
+
+      if (response?.resources) {
+        console.log(
+          "Fetched active video:",
+          response.resources
+        )
+        setActiveVideo(response.resources);
       } else {
         console.log("No active video found");
       }
@@ -191,9 +196,9 @@ const HomePage = () => {
                       muted
                       loop
                     >
-                      {activeVideo?.video_url && (
+                      {activeVideo?.resource_url && (
                         <source
-                          src={`${activeVideo.video_url}`}
+                          src={`${activeVideo.resource_url}`}
                           type="video/mp4"
                         />
                       )}

@@ -7,6 +7,7 @@ export class ResourceController {
         try {
             const { id } = req.params;
             const { type } = req.query;
+            const { isActive } = req.query;
 
             if (id) {
                 // Case 1: ID is provided in the URL (e.g., /resources/123)
@@ -15,15 +16,16 @@ export class ResourceController {
                     res.status(404).json({ message: "Resource not found" });
                     return;
                 }
-                res.status(200).json({ resource });
+                res.status(200).json({ message: "Get Resource(s) successfully", resource });
             } else if (type) {
+                const is_active = isActive === 'true' ? true : isActive === 'false' ? false : undefined;
                 // Case 2: No ID, but Type is provided in query (e.g., /resources?type=VIDEO)
-                const { resources } = await ResourceService.getAllResourcesByType(type as ResourceType);
-                res.status(200).json({ resources });
+                const { resources } = await ResourceService.getAllResourcesByType(type as ResourceType, is_active as boolean);
+                res.status(200).json({ message: "Get Resource(s) successfully", resources });
             } else {
                 // Case 3: No ID and no Type (e.g., /resources)
                 const { resources } = await ResourceService.getAllResources();
-                res.status(200).json({ resources });
+                res.status(200).json({ message: "Get Resource(s) successfully", resources });
             }
         } catch (error) {
             res.status(500).json({ message: `Error fetching resources: ${error}` });

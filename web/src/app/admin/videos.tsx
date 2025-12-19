@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/providers/auth-provider.tsx";
+import { api } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner.tsx";
 import { useState, useEffect } from "react";
 import {
@@ -43,12 +44,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserById } from "@/lib/utils";
 
 interface VideoData {
   id: string;
+  type: "VIDEO";
   title: string;
   description: string;
-  video_url: string;
+  author: string;
+  resource_url: string[];
   filename: string;
   size: number;
   uploaded_at: string;
@@ -64,6 +68,7 @@ function VideoManagement() {
   const [activeVideo, setActiveVideo] = useState<VideoData | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [videoToDelete, setVideoToDelete] = useState<VideoData | null>(null);
+  const [togglingActive, setTogglingActive] = useState<string | null>(null);
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -74,20 +79,14 @@ function VideoManagement() {
 
   const fetchVideos = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/videos`
+      const data = await api.get("/resources/resources?type=VIDEO");
+      setVideos(data.resources || []);
+
+      // Find and set active video
+      const active = data.resources?.find(
+        (video: VideoData) => video.is_active
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        setVideos(data.videos || []);
-
-        // Find and set active video
-        const active = data.videos?.find((video: VideoData) => video.is_active);
-        setActiveVideo(active || null);
-      } else {
-        toast.error("Failed to fetch videos");
-      }
+      setActiveVideo(active || null);
     } catch (error) {
       console.error("Error fetching videos:", error);
       toast.error("Error fetching videos");
@@ -112,31 +111,20 @@ function VideoManagement() {
 
     setUploading(true);
     const formData = new FormData();
-    formData.append("video", uploadForm.video);
+    formData.append("resource", uploadForm.video);
     formData.append("title", uploadForm.title);
+    formData.append("author", user?.id);
     formData.append("description", uploadForm.description);
+    formData.append("type", "VIDEO");
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/video-upload`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${user?.access_token}`,
-          },
-          body: formData,
-        }
-      );
+      const token = localStorage.getItem("token");
+      await api.post("/resources/resources/", formData, token || undefined);
 
-      if (response.ok) {
-        toast.success("Video uploaded successfully!");
-        setIsUploadModalOpen(false);
-        setUploadForm({ title: "", description: "", video: null });
-        fetchVideos(); // Refresh videos list
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || "Failed to upload video");
-      }
+      toast.success("Video uploaded successfully!");
+      setIsUploadModalOpen(false);
+      setUploadForm({ title: "", description: "", video: null });
+      fetchVideos(); // Refresh videos list
     } catch (error) {
       console.error("Error uploading video:", error);
       toast.error("Error uploading video");
@@ -146,26 +134,33 @@ function VideoManagement() {
   };
 
   const handleSetActive = async (videoId: string) => {
+    setTogglingActive(videoId);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/videos/${videoId}/set-active`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${user?.access_token}`,
-          },
-        }
+      const formData = new FormData();
+
+      const video = videos.find((v) => v.id === videoId);
+      if (video?.author && video?.is_active == false) {
+        formData.append("is_active", "true");
+        formData.append("author", video.author);
+      } else if (video?.author && video?.is_active == true) {
+        formData.append("is_active", "false");
+        formData.append("author", video.author);
+      }
+
+      const token = localStorage.getItem("token");
+      await api.put(
+        `/resources/resources/${videoId}`,
+        formData,
+        token || undefined
       );
 
-      if (response.ok) {
-        toast.success("Active video updated successfully!");
-        fetchVideos(); // Refresh videos list
-      } else {
-        toast.error("Failed to set active video");
-      }
+      toast.success("Active video updated successfully!");
+      fetchVideos(); // Refresh videos list
     } catch (error) {
       console.error("Error setting active video:", error);
       toast.error("Error setting active video");
+    } finally {
+      setTogglingActive(null);
     }
   };
 
@@ -173,24 +168,18 @@ function VideoManagement() {
     if (!videoToDelete) return;
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/videos/${videoToDelete.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${user?.access_token}`,
-          },
-        }
+      const token = localStorage.getItem("token");
+      // Pass author in body for ownership check
+      await api.delete(
+        `/resources/resources/${videoToDelete.id}`,
+        token || undefined,
+        { author: videoToDelete.author }
       );
 
-      if (response.ok) {
-        toast.success("Video deleted successfully!");
-        setIsDeleteDialogOpen(false);
-        setVideoToDelete(null);
-        fetchVideos(); // Refresh videos list
-      } else {
-        toast.error("Failed to delete video");
-      }
+      toast.success("Video deleted successfully!");
+      setIsDeleteDialogOpen(false);
+      setVideoToDelete(null);
+      fetchVideos(); // Refresh videos list
     } catch (error) {
       console.error("Error deleting video:", error);
       toast.error("Error deleting video");
@@ -215,13 +204,29 @@ function VideoManagement() {
     });
   };
 
+  const AuthorDisplay = ({ authorId }: { authorId: string }) => {
+    const [name, setName] = useState("...");
+
+    useEffect(() => {
+      const fetchName = async () => {
+        try {
+          const response = await getUserById(authorId);
+          const userData = response.data || response;
+          setName(userData.name || "Unknown");
+        } catch (error) {
+          console.error("Error fetching author:", error);
+          setName("Unknown");
+        }
+      };
+      if (authorId) fetchName();
+    }, [authorId]);
+
+    return <span>{name}</span>;
+  };
+
   useEffect(() => {
     fetchVideos();
   }, []);
-
-  // if (loading) {
-  //   return <LoadingSpinner />;
-  // }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -346,7 +351,10 @@ function VideoManagement() {
                     controls
                     preload="metadata"
                   >
-                    <source src={`${activeVideo.video_url}`} type="video/mp4" />
+                    <source
+                      src={`${activeVideo.resource_url[0]}`}
+                      type="video/mp4"
+                    />
                   </video>
                 </div>
                 <div className="space-y-3">
@@ -429,9 +437,10 @@ function VideoManagement() {
                             <video
                               className="w-full aspect-video rounded-lg bg-gray-100"
                               preload="metadata"
+                              controls
                             >
                               <source
-                                src={`${video.video_url}`}
+                                src={`${video.resource_url[0]}`}
                                 type="video/mp4"
                               />
                             </video>
@@ -456,29 +465,41 @@ function VideoManagement() {
                           <div className="text-xs text-gray-500 space-y-1">
                             <p>Size: {formatFileSize(video.size)}</p>
                             <p>Uploaded: {formatDate(video.uploaded_at)}</p>
+                            <p>
+                              Author: <AuthorDisplay authorId={video.author} />
+                            </p>
                           </div>
 
                           <div className="flex items-center justify-between pt-2">
-                            <Button
-                              size="sm"
-                              variant={
-                                video.is_active ? "secondary" : "default"
-                              }
-                              onClick={() => handleSetActive(video.id)}
-                              disabled={video.is_active}
-                            >
-                              {video.is_active ? (
-                                <>
+                            {video.is_active ? (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => handleSetActive(video.id)}
+                                disabled={togglingActive === video.id}
+                              >
+                                {togglingActive === video.id ? (
+                                  <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                                ) : (
                                   <CheckCircle className="mr-1 h-3 w-3" />
-                                  Active
-                                </>
-                              ) : (
-                                <>
+                                )}
+                                Active
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleSetActive(video.id)}
+                                disabled={togglingActive === video.id}
+                              >
+                                {togglingActive === video.id ? (
+                                  <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                                ) : (
                                   <Play className="mr-1 h-3 w-3" />
-                                  Set Active
-                                </>
-                              )}
-                            </Button>
+                                )}
+                                Set Active
+                              </Button>
+                            )}
 
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -489,7 +510,10 @@ function VideoManagement() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
                                   onClick={() =>
-                                    window.open(`${video.video_url}`, "_blank")
+                                    window.open(
+                                      `${video.resource_url[0]}`,
+                                      "_blank"
+                                    )
                                   }
                                 >
                                   <Eye className="mr-2 h-4 w-4" />

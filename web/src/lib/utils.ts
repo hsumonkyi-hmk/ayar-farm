@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import { api } from './api';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -36,4 +37,9 @@ const routeTo = (url: string) => {
   }
 }
 
-export { getGreeting, formatTime, formatDate, routeTo };
+const getUserById = async (id: string) => {
+  const user = await api.get(`/users/${id}`);
+  return user;
+}
+
+export { getGreeting, formatTime, formatDate, routeTo, getUserById };

@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/providers/auth-provider.tsx";
+import { api } from "@/lib/api";
 import LoadingSpinner from "@/components/LoadingSpinner.tsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ interface Application {
   id: string;
   title: string;
   description: string;
-  app_url: string;
+  resource_url: string[];
   filename: string;
   size: number;
   version: string;
@@ -93,13 +94,12 @@ function ApplicationManagement() {
   const fetchApplications = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/applications`
+      const token = localStorage.getItem("token");
+      const data = await api.get(
+        "/resources/resources?type=APPLICATION",
+        token || undefined
       );
-      const data = await response.json();
-      if (data.success) {
-        setApplications(data.applications);
-      }
+      setApplications(data.resources || []);
     } catch (error) {
       console.error("Error fetching applications:", error);
     } finally {
@@ -134,41 +134,32 @@ function ApplicationManagement() {
 
     setUploading(true);
     const uploadData = new FormData();
-    uploadData.append("application", selectedFile);
+    uploadData.append("resource", selectedFile);
     uploadData.append("title", formData.title);
     uploadData.append("description", formData.description);
     uploadData.append("version", formData.version || "1.0.0");
     uploadData.append("platform", formData.platform);
+    uploadData.append("type", "APPLICATION");
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/application-upload`,
-        {
-          method: "POST",
-          body: uploadData,
-        }
-      );
+      const token = localStorage.getItem("token");
+      await api.post("/resources/resources/", uploadData, token || undefined);
 
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Application uploaded successfully!");
-        setSelectedFile(null);
-        setFormData({
-          title: "",
-          description: "",
-          version: "",
-          platform: "android",
-        });
-        // Reset file input
-        const fileInput = document.getElementById(
-          "application-file"
-        ) as HTMLInputElement;
-        if (fileInput) fileInput.value = "";
+      toast.success("Application uploaded successfully!");
+      setSelectedFile(null);
+      setFormData({
+        title: "",
+        description: "",
+        version: "",
+        platform: "android",
+      });
+      // Reset file input
+      const fileInput = document.getElementById(
+        "application-file"
+      ) as HTMLInputElement;
+      if (fileInput) fileInput.value = "";
 
-        fetchApplications();
-      } else {
-        toast.error("Upload failed: " + result.error);
-      }
+      fetchApplications();
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("Upload failed");
@@ -179,23 +170,18 @@ function ApplicationManagement() {
 
   const handleSetActive = async (appId: string) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/applications/${appId}/set-active`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const formData = new FormData();
+      formData.append("is_active", "true");
+
+      const token = localStorage.getItem("token");
+      await api.put(
+        `/resources/resources/${appId}`,
+        formData,
+        token || undefined
       );
 
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Active application updated successfully!");
-        fetchApplications();
-      } else {
-        toast.error("Failed to set active application");
-      }
+      toast.success("Active application updated successfully!");
+      fetchApplications();
     } catch (error) {
       console.error("Error setting active application:", error);
       toast.error("Failed to set active application");
@@ -206,20 +192,14 @@ function ApplicationManagement() {
     if (!appToDelete) return;
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/applications/${appToDelete}`,
-        {
-          method: "DELETE",
-        }
+      const token = localStorage.getItem("token");
+      await api.delete(
+        `/resources/resources/${appToDelete}`,
+        token || undefined
       );
 
-      const result = await response.json();
-      if (result.success) {
-        toast.success("Application deleted successfully!");
-        fetchApplications();
-      } else {
-        toast.error("Failed to delete application");
-      }
+      toast.success("Application deleted successfully!");
+      fetchApplications();
     } catch (error) {
       console.error("Error deleting application:", error);
       toast.error("Failed to delete application");
@@ -446,7 +426,9 @@ function ApplicationManagement() {
                           </Button>
                         )}
                         <Button
-                          onClick={() => window.open(app.app_url, "_blank")}
+                          onClick={() =>
+                            window.open(app.resource_url[0], "_blank")
+                          }
                           variant="outline"
                           size="sm"
                         >
@@ -464,9 +446,12 @@ function ApplicationManagement() {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Application</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                Delete Application
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{app.title}"? This action cannot be undone.
+                                Are you sure you want to delete "{app.title}"?
+                                This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

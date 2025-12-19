@@ -23,7 +23,7 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
 
 export const isOwner = (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
-    const targetId = req.body.id;
+    const targetId = req.body.author;
 
     if (user && user.id === targetId) {
         next();

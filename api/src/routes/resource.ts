@@ -12,7 +12,7 @@ resource.get("/resources/:id", (req, res) => resourceController.getResources(req
 
 resource.post("/resources/", authenticate, uploadResource.fields([{ name: 'resource', maxCount: 5 }, { name: 'image', maxCount: 5 }]), (req, res) => resourceController.addResource(req, res));
 
-resource.put("/resources/:id", authenticate, isOwner, uploadResource.fields([{ name: 'resource', maxCount: 5 }, { name: 'image', maxCount: 5 }]), (req, res) => resourceController.editResource(req, res));
+resource.put("/resources/:id", authenticate, uploadResource.fields([{ name: 'resource', maxCount: 5 }, { name: 'image', maxCount: 5 }]), isOwner, (req, res) => resourceController.editResource(req, res));
 
 resource.delete("/resources/:id", authenticate, isOwner, (req, res) => resourceController.deleteResource(req, res))
 
