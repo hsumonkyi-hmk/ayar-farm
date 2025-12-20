@@ -4,7 +4,10 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 import type { MachineType, Machine, Document } from "@/lib/interface";
-import { MachineContext, type MachineContextType } from "@/context/machine-context";
+import {
+  MachineContext,
+  type MachineContextType,
+} from "@/context/machine-context";
 
 export const MachineProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -230,7 +233,9 @@ export const MachineProvider: React.FC<{ children: ReactNode }> = ({
       }
 
       const token = localStorage.getItem("token");
-      await api.delete("/agriindustry/machinetypes", token || undefined, { ids });
+      await api.delete("/agriindustry/machinetypes", token || undefined, {
+        ids,
+      });
 
       setMachineTypes((prev) => prev.filter((type) => !ids.includes(type.id)));
       toast.success(`${ids.length} machine types deleted successfully`);
