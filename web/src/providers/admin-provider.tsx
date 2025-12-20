@@ -1,23 +1,8 @@
 import { api } from "@/lib/api";
+import type { User } from "@/lib/interface";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-
-// User type definition based on the API response
-export interface User {
-  id: string;
-  name: string;
-  phone_number: string;
-  email: string | null;
-  gender: string;
-  user_type: string;
-  profile_picture: string | null;
-  location: string | null;
-  isVerified: boolean;
-  last_login: string;
-  created_at: string;
-  updated_at: string;
-}
 
 interface AdminContextType {
   users: User[];

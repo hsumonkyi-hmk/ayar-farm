@@ -53,51 +53,7 @@ import AdminProvider from "@/providers/admin-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
-
-interface ChatGroup {
-  id: string;
-  name: string;
-  type: "CROPS" | "LIVESTOCK" | "FISHERIES" | "MACHINE";
-  description?: string;
-  imageUrl?: string;
-  ownerId: string;
-  createdAt: string;
-  updatedAt: string;
-  isMember?: boolean;
-  joinedAt?: string;
-  owner: {
-    id: string;
-    name: string;
-    username: string;
-    profilePicture: string;
-    user_type: string;
-  };
-  _count: {
-    members: number;
-    messages: number;
-  };
-}
-
-interface ChatMessage {
-  id: string;
-  content: string;
-  createdAt: string;
-  groupId?: string;
-  groupName?: string;
-  user: {
-    id: string;
-    name: string;
-    username: string;
-    profilePicture: string;
-  };
-}
-
-interface CreateGroupForm {
-  name: string;
-  type: "CROPS" | "LIVESTOCK" | "FISHERIES" | "MACHINE";
-  description: string;
-  imageFile: File | null;
-}
+import type { ChatGroup, ChatMessage, CreateGroupForm } from "@/lib/interface";
 
 export function ChatRoomManagement() {
   const { user } = useAuth();

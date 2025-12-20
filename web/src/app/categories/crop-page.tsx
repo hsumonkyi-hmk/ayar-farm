@@ -60,51 +60,13 @@ import {
   BookOpen, // Add this for IFS documents icon
 } from "lucide-react"; // Add this import for spinner
 import { toast } from "sonner";
-
-// Type definitions based on Prisma schema
-interface CropType {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-  _count?: {
-    crops: number;
-  };
-}
-
-interface Crop {
-  id: string;
-  name: string;
-  image_url: string;
-  type_id: string;
-  created_at: string;
-  updated_at: string;
-  type: CropType;
-}
-
-interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  crop_type?: CropType;
-  crops?: Crop;
-}
+import type { Crop, CropType, Document } from "@/lib/interface";
 
 const CropsManagement = () => {
   const {
     cropTypes,
     crops,
-    ifsList,
+    documents,
 
     isLoading,
     isUploadingFile,
@@ -119,13 +81,13 @@ const CropsManagement = () => {
     deleteCrop,
     bulkDeleteCrops,
 
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    createDocument,
+    updateDocument,
+    deleteDocument,
 
     getTotalCropTypes,
     getTotalCrops,
-    getTotalIFS,
+    getTotalDocuments,
 
     refreshAll,
   } = useCrop();
@@ -154,13 +116,14 @@ const CropsManagement = () => {
   const [sortBy, setSortBy] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // IFS UI state
-  const [ifsSearchTerm, setIfsSearchTerm] = useState("");
-  const [selectedIfsCropType, setSelectedIfsCropType] = useState<string>("");
-  const [selectedIfsCrop, setSelectedIfsCrop] = useState<string>("");
-  const [isIfsDialogOpen, setIsIfsDialogOpen] = useState(false);
-  const [editingIfs, setEditingIfs] = useState<IFS | null>(null);
-  const [ifsFormData, setIfsFormData] = useState({
+  // Document UI state
+  const [documentSearchTerm, setDocumentSearchTerm] = useState("");
+  const [selectedDocumentCropType, setSelectedDocumentCropType] =
+    useState<string>("");
+  const [selectedDocumentCrop, setSelectedDocumentCrop] = useState<string>("");
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [documentFormData, setDocumentFormData] = useState({
     crop_type_id: "none",
     crop_id: "none",
     title: "",
@@ -180,11 +143,13 @@ const CropsManagement = () => {
     "asc"
   );
 
-  // IFS pagination and sorting state
-  const [ifsCurrentPage, setIfsCurrentPage] = useState(1);
-  const [ifsPageSize, setIfsPageSize] = useState(10);
-  const [ifsSortBy, setIfsSortBy] = useState<string>("");
-  const [ifsSortOrder, setIfsSortOrder] = useState<"asc" | "desc">("asc");
+  // Document pagination and sorting state
+  const [documentCurrentPage, setDocumentCurrentPage] = useState(1);
+  const [documentPageSize, setDocumentPageSize] = useState(10);
+  const [documentSortBy, setDocumentSortBy] = useState<string>("");
+  const [documentSortOrder, setDocumentSortOrder] = useState<"asc" | "desc">(
+    "asc"
+  );
 
   // Delete confirmation dialog states
   const [deleteCropTypeId, setDeleteCropTypeId] = useState<string | null>(null);
@@ -192,11 +157,12 @@ const CropsManagement = () => {
     useState(false);
   const [deleteCropId, setDeleteCropId] = useState<string | null>(null);
   const [isDeleteCropDialogOpen, setIsDeleteCropDialogOpen] = useState(false);
-  const [deleteIfsId, setDeleteIfsId] = useState<string | null>(null);
-  const [isDeleteIfsDialogOpen, setIsDeleteIfsDialogOpen] = useState(false);
+  const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
+  const [isDeleteDocumentDialogOpen, setIsDeleteDocumentDialogOpen] =
+    useState(false);
   const [deleteCropTypeLoading, setDeleteCropTypeLoading] = useState(false);
   const [deleteCropLoading, setDeleteCropLoading] = useState(false);
-  const [deleteIfsLoading, setDeleteIfsLoading] = useState(false);
+  const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions
   const filteredCropTypes = cropTypes.filter((type) =>
@@ -263,8 +229,8 @@ const CropsManagement = () => {
         aValue = a.name;
         bValue = b.name;
       } else if (sortBy === "type") {
-        aValue = a.type.name;
-        bValue = b.type.name;
+        aValue = a.type?.name || "";
+        bValue = b.type?.name || "";
       } else if (sortBy === "created_at") {
         aValue = new Date(a.created_at);
         bValue = new Date(b.created_at);
@@ -280,60 +246,65 @@ const CropsManagement = () => {
       }
     });
 
-  const filteredIFS = ifsList.filter((ifs) => {
-    const searchTerm = ifsSearchTerm.toLowerCase();
+  const filteredDocuments = documents.filter((doc) => {
+    const searchTerm = documentSearchTerm.toLowerCase();
     const matchesSearch =
-      ifs.crop_type?.name?.toLowerCase().includes(searchTerm) ||
-      ifs.crops?.name?.toLowerCase().includes(searchTerm);
+      !documentSearchTerm ||
+      doc.CropTypes?.name?.toLowerCase().includes(searchTerm) ||
+      doc.Crops?.name?.toLowerCase().includes(searchTerm) ||
+      doc.title?.toLowerCase().includes(searchTerm);
 
     const matchesCropType =
-      selectedIfsCropType === "" ||
-      selectedIfsCropType === "all" ||
-      ifs.crop_type_id === selectedIfsCropType;
+      selectedDocumentCropType === "" ||
+      selectedDocumentCropType === "all" ||
+      doc.crop_type_id === selectedDocumentCropType;
 
     const matchesCrop =
-      selectedIfsCrop === "" ||
-      selectedIfsCrop === "all" ||
-      ifs.crop_id === selectedIfsCrop;
+      selectedDocumentCrop === "" ||
+      selectedDocumentCrop === "all" ||
+      doc.crop_id === selectedDocumentCrop;
 
     return matchesSearch && matchesCropType && matchesCrop;
   });
 
-  const filteredAndSortedIFS = filteredIFS.sort((a, b) => {
-    if (!ifsSortBy) return 0;
+  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
+    if (!documentSortBy) return 0;
 
     let aValue: any = a;
     let bValue: any = b;
 
-    if (ifsSortBy === "file") {
+    if (documentSortBy === "file") {
       aValue = a.id;
       bValue = b.id;
-    } else if (ifsSortBy === "cropType") {
+    } else if (documentSortBy === "cropType") {
       aValue = a.crop_type?.name || "";
       bValue = b.crop_type?.name || "";
-    } else if (ifsSortBy === "crop") {
+    } else if (documentSortBy === "crop") {
       aValue = a.crops?.name || "";
       bValue = b.crops?.name || "";
-    } else if (ifsSortBy === "created_at") {
+    } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);
     }
 
-    if (ifsSortOrder === "asc") {
+    if (documentSortOrder === "asc") {
       return aValue > bValue ? 1 : -1;
     } else {
       return aValue < bValue ? 1 : -1;
     }
   });
 
-  // IFS pagination logic
-  const ifsTotalPages = Math.max(
+  // Document pagination logic
+  const documentTotalPages = Math.max(
     1,
-    Math.ceil(filteredAndSortedIFS.length / ifsPageSize)
+    Math.ceil(filteredAndSortedDocuments.length / documentPageSize)
   );
-  const ifsStartIndex = (ifsCurrentPage - 1) * ifsPageSize;
-  const ifsEndIndex = ifsStartIndex + ifsPageSize;
-  const paginatedIFS = filteredAndSortedIFS.slice(ifsStartIndex, ifsEndIndex);
+  const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
+  const documentEndIndex = documentStartIndex + documentPageSize;
+  const paginatedDocuments = filteredAndSortedDocuments.slice(
+    documentStartIndex,
+    documentEndIndex
+  );
 
   // Pagination logic
   const totalPages = Math.max(
@@ -354,15 +325,15 @@ const CropsManagement = () => {
     setCropTypeCurrentPage(1);
   }, [cropTypeSearchTerm, cropTypeSortBy, cropTypeSortOrder]);
 
-  // Reset IFS pagination when filters change
+  // Reset Document pagination when filters change
   useEffect(() => {
-    setIfsCurrentPage(1);
+    setDocumentCurrentPage(1);
   }, [
-    ifsSearchTerm,
-    selectedIfsCropType,
-    selectedIfsCrop,
-    ifsSortBy,
-    ifsSortOrder,
+    documentSearchTerm,
+    selectedDocumentCropType,
+    selectedDocumentCrop,
+    documentSortBy,
+    documentSortOrder,
   ]);
 
   // Auto-adjust page if current page exceeds total pages
@@ -379,10 +350,10 @@ const CropsManagement = () => {
   }, [cropTypeCurrentPage, cropTypeTotalPages]);
 
   useEffect(() => {
-    if (ifsCurrentPage > ifsTotalPages && ifsTotalPages > 0) {
-      setIfsCurrentPage(ifsTotalPages);
+    if (documentCurrentPage > documentTotalPages && documentTotalPages > 0) {
+      setDocumentCurrentPage(documentTotalPages);
     }
-  }, [ifsCurrentPage, ifsTotalPages]);
+  }, [documentCurrentPage, documentTotalPages]);
 
   // CropType CRUD operations
   const handleCropTypeSubmit = async (e: React.FormEvent) => {
@@ -463,45 +434,48 @@ const CropsManagement = () => {
     setIsDeleteCropDialogOpen(true);
   };
 
-  // IFS CRUD operations
-  const handleIfsSubmit = async (e: React.FormEvent) => {
+  // Document CRUD operations
+  const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ifsFormData.pdfFile && !editingIfs) {
+    if (!documentFormData.pdfFile && !editingDocument) {
       toast.error("Please select a PDF file");
       return;
     }
 
     const formData = new FormData();
-    if (ifsFormData.crop_type_id && ifsFormData.crop_type_id !== "none") {
-      formData.append("crop_type_id", ifsFormData.crop_type_id);
+    if (
+      documentFormData.crop_type_id &&
+      documentFormData.crop_type_id !== "none"
+    ) {
+      formData.append("crop_type_id", documentFormData.crop_type_id);
     }
-    if (ifsFormData.crop_id && ifsFormData.crop_id !== "none") {
-      formData.append("crop_id", ifsFormData.crop_id);
+    if (documentFormData.crop_id && documentFormData.crop_id !== "none") {
+      formData.append("crop_id", documentFormData.crop_id);
     }
-    formData.append("title", ifsFormData.title);
-    formData.append("author", ifsFormData.author);
-    if (ifsFormData.pdfFile) {
-      formData.append("file", ifsFormData.pdfFile);
+    formData.append("title", documentFormData.title);
+    formData.append("author", documentFormData.author);
+    if (documentFormData.pdfFile) {
+      formData.append("file_urls", documentFormData.pdfFile);
     }
 
-    const success = editingIfs
-      ? await updateIFS(editingIfs.id, formData)
-      : await createIFS(formData);
+    const success = editingDocument
+      ? await updateDocument(editingDocument.id, formData)
+      : await createDocument(formData);
 
     if (success) {
-      setIsIfsDialogOpen(false);
-      resetIfsForm();
+      setIsDocumentDialogOpen(false);
+      resetDocumentForm();
     }
   };
 
-  const handleDeleteIfs = async () => {
-    if (!deleteIfsId) return;
-    setDeleteIfsLoading(true);
-    await deleteIFS(deleteIfsId);
-    setDeleteIfsLoading(false);
-    setIsDeleteIfsDialogOpen(false);
-    setDeleteIfsId(null);
+  const handleDeleteDocument = async () => {
+    if (!deleteDocumentId) return;
+    setDeleteDocumentLoading(true);
+    await deleteDocument(deleteDocumentId);
+    setDeleteDocumentLoading(false);
+    setIsDeleteDocumentDialogOpen(false);
+    setDeleteDocumentId(null);
   };
 
   // Form reset functions
@@ -515,53 +489,53 @@ const CropsManagement = () => {
     setEditingCrop(null);
   };
 
-  const resetIfsForm = () => {
-    setIfsFormData({
+  const resetDocumentForm = () => {
+    setDocumentFormData({
       crop_type_id: "none",
       crop_id: "none",
       title: "",
       author: "",
       pdfFile: null,
     });
-    setEditingIfs(null);
+    setEditingDocument(null);
   };
 
   // Edit handlers
   const handleEditCropType = (cropType: CropType) => {
     setEditingCropType(cropType);
     setCropTypeFormData({
-      name: cropType.name,
+      name: cropType.name ?? "",
       image: null,
     });
     setIsCropTypeDialogOpen(true);
   };
 
-  // Open IFS delete dialog
-  const openDeleteIfsDialog = (id: string) => {
-    setDeleteIfsId(id);
-    setIsDeleteIfsDialogOpen(true);
+  // Open Document delete dialog
+  const openDeleteDocumentDialog = (id: string) => {
+    setDeleteDocumentId(id);
+    setIsDeleteDocumentDialogOpen(true);
   };
 
   const handleEditCrop = (crop: Crop) => {
     setEditingCrop(crop);
     setCropFormData({
-      name: crop.name,
-      type_id: crop.type_id,
+      name: crop.name ?? "",
+      type_id: crop.type_id ?? "",
       image: null,
     });
     setIsCropDialogOpen(true);
   };
 
-  const handleEditIfs = (ifs: IFS) => {
-    setEditingIfs(ifs);
-    setIfsFormData({
-      crop_type_id: ifs.crop_type_id || "none",
-      crop_id: ifs.crop_id || "none",
-      title: ifs.title,
-      author: ifs.author,
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc);
+    setDocumentFormData({
+      crop_type_id: doc.crop_type_id || "none",
+      crop_id: doc.crop_id || "none",
+      title: doc.title ?? "",
+      author: doc.author ?? "",
       pdfFile: null,
     });
-    setIsIfsDialogOpen(true);
+    setIsDocumentDialogOpen(true);
   };
 
   // Dialog close handlers
@@ -575,9 +549,9 @@ const CropsManagement = () => {
     resetCropForm();
   };
 
-  const handleIfsDialogClose = () => {
-    setIsIfsDialogOpen(false);
-    resetIfsForm();
+  const handleDocumentDialogClose = () => {
+    setIsDocumentDialogOpen(false);
+    resetDocumentForm();
   };
 
   // Selection handlers
@@ -636,13 +610,13 @@ const CropsManagement = () => {
     }
   };
 
-  // IFS sorting handler
-  const handleSortIfs = (column: string) => {
-    if (ifsSortBy === column) {
-      setIfsSortOrder(ifsSortOrder === "asc" ? "desc" : "asc");
+  // Document sorting handler
+  const handleSortDocument = (column: string) => {
+    if (documentSortBy === column) {
+      setDocumentSortOrder(documentSortOrder === "asc" ? "desc" : "asc");
     } else {
-      setIfsSortBy(column);
-      setIfsSortOrder("asc");
+      setDocumentSortBy(column);
+      setDocumentSortOrder("asc");
     }
   };
 
@@ -655,17 +629,17 @@ const CropsManagement = () => {
     });
   };
 
-  // Clear IFS filters function
-  const clearIfsFilters = () => {
-    setIfsSearchTerm("");
-    setSelectedIfsCropType("");
-    setSelectedIfsCrop("");
+  // Clear Document filters function
+  const clearDocumentFilters = () => {
+    setDocumentSearchTerm("");
+    setSelectedDocumentCropType("");
+    setSelectedDocumentCrop("");
   };
 
-  // Handle IFS crop type change - reset crop filter when crop type changes
-  const handleIfsCropTypeChange = (value: string) => {
-    setSelectedIfsCropType(value);
-    setSelectedIfsCrop(""); // Reset crop selection when crop type changes
+  // Handle Document crop type change - reset crop filter when crop type changes
+  const handleDocumentCropTypeChange = (value: string) => {
+    setSelectedDocumentCropType(value);
+    setSelectedDocumentCrop(""); // Reset crop selection when crop type changes
   };
 
   return (
@@ -724,7 +698,7 @@ const CropsManagement = () => {
                     new Set(
                       cropTypes
                         .filter(
-                          (type) => type._count?.crops && type._count.crops > 0
+                          (type) => type.crops?.length && type.crops?.length > 0
                         )
                         .map((type) => type.id)
                     ).size
@@ -778,7 +752,7 @@ const CropsManagement = () => {
           </CardContent>
         </Card>
 
-        {/* IFS Documents Card */}
+        {/* Documents Card */}
         <Card className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-bl-full"></div>
           <CardHeader className="pb-3">
@@ -789,7 +763,7 @@ const CropsManagement = () => {
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-violet-800 uppercase tracking-wide">
-                    IFS Documents
+                    Documents
                   </CardTitle>
                   <p className="text-xs text-violet-600/80 mt-0.5">
                     Knowledge base
@@ -801,15 +775,15 @@ const CropsManagement = () => {
           <CardContent className="pt-0">
             <div className="space-y-3">
               <div className="text-3xl font-bold text-violet-900">
-                {getTotalIFS()}
+                {getTotalDocuments()}
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-violet-700 font-medium">
                   {
                     [
                       ...new Set(
-                        ifsList
-                          .map((ifs) => ifs.crop_id)
+                        documents
+                          .map((doc) => doc.crop_id)
                           .filter((id) => id !== null)
                       ),
                     ].length
@@ -830,7 +804,7 @@ const CropsManagement = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="crop-types">Crop Types</TabsTrigger>
           <TabsTrigger value="crops">Crops</TabsTrigger>
-          <TabsTrigger value="ifs-documents">IFS Documents</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         {/* CROP TYPES TAB */}
@@ -1031,7 +1005,11 @@ const CropsManagement = () => {
                       </TableCell>
                       <TableCell>
                         <img
-                          src={cropType.image_url || "/placeholder-image.png"}
+                          src={
+                            cropType.image_urls?.[0] ||
+                            cropType.image_url ||
+                            "/placeholder-image.png"
+                          }
                           alt={cropType.name}
                           className="w-10 h-10 rounded-md object-cover"
                         />
@@ -1041,7 +1019,7 @@ const CropsManagement = () => {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {cropType._count?.crops || 0} crops
+                          {cropType.crops?.length || 0} crops
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(cropType.created_at)}</TableCell>
@@ -1370,7 +1348,11 @@ const CropsManagement = () => {
                       </TableCell>
                       <TableCell>
                         <img
-                          src={crop.image_url || "/placeholder-image.png"}
+                          src={
+                            crop.image_urls?.[0] ||
+                            crop.image_url ||
+                            "/placeholder-image.png"
+                          }
                           alt={crop.name}
                           className="w-10 h-10 rounded-md object-cover"
                         />
@@ -1382,7 +1364,7 @@ const CropsManagement = () => {
                           className="bg-green-600/10 text-green-600"
                         >
                           <Tag className="h-4 w-4 mr-1" />
-                          {crop.type.name}
+                          {crop.type?.name || "Unknown"}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(crop.created_at)}</TableCell>
@@ -1475,22 +1457,22 @@ const CropsManagement = () => {
           </div>
         </TabsContent>
 
-        {/* IFS DOCUMENTS TAB */}
-        <TabsContent value="ifs-documents" className="space-y-4">
+        {/* DOCUMENTS TAB */}
+        <TabsContent value="documents" className="space-y-4">
           <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-between w-full">
             <div className="flex flex-wrap gap-2 items-center min-w-0 w-full md:w-auto">
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search IFS documents..."
-                  value={ifsSearchTerm}
-                  onChange={(e) => setIfsSearchTerm(e.target.value)}
+                  placeholder="Search documents..."
+                  value={documentSearchTerm}
+                  onChange={(e) => setDocumentSearchTerm(e.target.value)}
                   className="pl-8 w-full sm:w-[300px]"
                 />
               </div>
               <Select
-                value={selectedIfsCropType}
-                onValueChange={handleIfsCropTypeChange}
+                value={selectedDocumentCropType}
+                onValueChange={handleDocumentCropTypeChange}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Filter by Crop Type" />
@@ -1505,8 +1487,8 @@ const CropsManagement = () => {
                 </SelectContent>
               </Select>
               <Select
-                value={selectedIfsCrop}
-                onValueChange={setSelectedIfsCrop}
+                value={selectedDocumentCrop}
+                onValueChange={setSelectedDocumentCrop}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Filter by Crop" />
@@ -1516,22 +1498,24 @@ const CropsManagement = () => {
                   {crops
                     .filter(
                       (crop) =>
-                        selectedIfsCropType === "" ||
-                        selectedIfsCropType === "all" ||
-                        crop.type_id === selectedIfsCropType
+                        selectedDocumentCropType === "" ||
+                        selectedDocumentCropType === "all" ||
+                        crop.type_id === selectedDocumentCropType
                     )
                     .map((crop) => (
                       <SelectItem key={crop.id} value={crop.id}>
-                        {crop.name} ({crop.type.name})
+                        {crop.name} ({crop.type?.name})
                       </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
-              {(ifsSearchTerm || selectedIfsCropType || selectedIfsCrop) && (
+              {(documentSearchTerm ||
+                selectedDocumentCropType ||
+                selectedDocumentCrop) && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={clearIfsFilters}
+                  onClick={clearDocumentFilters}
                   className="px-3"
                 >
                   Clear Filters
@@ -1539,40 +1523,44 @@ const CropsManagement = () => {
               )}
             </div>
             <div className="flex flex-wrap gap-2 items-center justify-end w-full md:w-auto">
-              <Dialog open={isIfsDialogOpen} onOpenChange={setIsIfsDialogOpen}>
+              <Dialog
+                open={isDocumentDialogOpen}
+                onOpenChange={setIsDocumentDialogOpen}
+              >
                 <DialogTrigger asChild>
                   <Button
-                    onClick={() => setEditingIfs(null)}
+                    onClick={() => setEditingDocument(null)}
                     className="w-full sm:w-auto"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add IFS Document
+                    Add Document
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingIfs
-                        ? "Edit IFS Document"
-                        : "Add New IFS Document"}
+                      {editingDocument ? "Edit Document" : "Add New Document"}
                     </DialogTitle>
                     <DialogDescription>
-                      {editingIfs
-                        ? "Update IFS document information"
-                        : "Upload a new IFS document"}
+                      {editingDocument
+                        ? "Update document information"
+                        : "Upload a new document"}
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleIfsSubmit}>
+                  <form onSubmit={handleDocumentSubmit}>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsCropType" className="text-right">
+                        <Label
+                          htmlFor="documentCropType"
+                          className="text-right"
+                        >
                           Crop Type
                         </Label>
                         <Select
-                          value={ifsFormData.crop_type_id}
+                          value={documentFormData.crop_type_id}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               crop_type_id: value,
                               crop_id: "none", // Reset crop selection when crop type changes
                             })
@@ -1592,14 +1580,14 @@ const CropsManagement = () => {
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsCrop" className="text-right">
+                        <Label htmlFor="documentCrop" className="text-right">
                           Crop
                         </Label>
                         <Select
-                          value={ifsFormData.crop_id}
+                          value={documentFormData.crop_id}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               crop_id: value,
                             })
                           }
@@ -1612,73 +1600,73 @@ const CropsManagement = () => {
                             {crops
                               .filter(
                                 (crop) =>
-                                  ifsFormData.crop_type_id === "none" ||
-                                  !ifsFormData.crop_type_id ||
-                                  crop.type_id === ifsFormData.crop_type_id
+                                  documentFormData.crop_type_id === "none" ||
+                                  !documentFormData.crop_type_id ||
+                                  crop.type_id === documentFormData.crop_type_id
                               )
                               .map((crop) => (
                                 <SelectItem key={crop.id} value={crop.id}>
-                                  {crop.name} ({crop.type.name})
+                                  {crop.name} ({crop.type?.name})
                                 </SelectItem>
                               ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsTitle" className="text-right">
+                        <Label htmlFor="documentTitle" className="text-right">
                           Title
                         </Label>
                         <Input
-                          id="ifsTitle"
-                          value={ifsFormData.title}
+                          id="documentTitle"
+                          value={documentFormData.title}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               title: e.target.value,
                             })
                           }
                           className="col-span-3"
                           placeholder="Enter document title"
-                          required={!editingIfs}
+                          required={!editingDocument}
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsAuthor" className="text-right">
+                        <Label htmlFor="documentAuthor" className="text-right">
                           Author
                         </Label>
                         <Input
-                          id="ifsAuthor"
-                          value={ifsFormData.author}
+                          id="documentAuthor"
+                          value={documentFormData.author}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               author: e.target.value,
                             })
                           }
                           className="col-span-3"
                           placeholder="Enter document author"
-                          required={!editingIfs}
+                          required={!editingDocument}
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsPdf" className="text-right">
+                        <Label htmlFor="documentPdf" className="text-right">
                           PDF File
                         </Label>
                         <Input
-                          id="ifsPdf"
+                          id="documentPdf"
                           type="file"
                           accept="application/pdf"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               pdfFile: file || null,
                             });
                           }}
                           className="col-span-3"
-                          required={!editingIfs}
+                          required={!editingDocument}
                         />
-                        {editingIfs && (
+                        {editingDocument && (
                           <p className="col-span-4 text-xs text-muted-foreground text-center">
                             Leave empty to keep the current PDF file
                           </p>
@@ -1689,7 +1677,7 @@ const CropsManagement = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleIfsDialogClose}
+                        onClick={handleDocumentDialogClose}
                       >
                         Cancel
                       </Button>
@@ -1697,9 +1685,9 @@ const CropsManagement = () => {
                         {isUploadingFile ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {editingIfs ? "Updating..." : "Uploading..."}
+                            {editingDocument ? "Updating..." : "Uploading..."}
                           </>
-                        ) : editingIfs ? (
+                        ) : editingDocument ? (
                           "Update"
                         ) : (
                           "Upload"
@@ -1713,33 +1701,36 @@ const CropsManagement = () => {
           </div>
 
           {/* Filter Summary */}
-          {(ifsSearchTerm || selectedIfsCropType || selectedIfsCrop) && (
+          {(documentSearchTerm ||
+            selectedDocumentCropType ||
+            selectedDocumentCrop) && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg">
               <span>Filters applied:</span>
-              {ifsSearchTerm && (
+              {documentSearchTerm && (
                 <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                  Search: "{ifsSearchTerm}"
+                  Search: "{documentSearchTerm}"
                 </span>
               )}
-              {selectedIfsCropType && (
+              {selectedDocumentCropType && (
                 <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
                   Crop Type:{" "}
-                  {selectedIfsCropType === "all"
+                  {selectedDocumentCropType === "all"
                     ? "All"
-                    : cropTypes.find((t) => t.id === selectedIfsCropType)?.name}
+                    : cropTypes.find((t) => t.id === selectedDocumentCropType)
+                        ?.name}
                 </span>
               )}
-              {selectedIfsCrop && (
+              {selectedDocumentCrop && (
                 <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
                   Crop:{" "}
-                  {selectedIfsCrop === "all"
+                  {selectedDocumentCrop === "all"
                     ? "All"
-                    : crops.find((c) => c.id === selectedIfsCrop)?.name}
+                    : crops.find((c) => c.id === selectedDocumentCrop)?.name}
                 </span>
               )}
               <span className="ml-auto font-medium">
-                {filteredAndSortedIFS.length} document
-                {filteredAndSortedIFS.length !== 1 ? "s" : ""} found
+                {filteredAndSortedDocuments.length} document
+                {filteredAndSortedDocuments.length !== 1 ? "s" : ""} found
               </span>
             </div>
           )}
@@ -1753,7 +1744,7 @@ const CropsManagement = () => {
                   <TableHead>File</TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("cropType")}
+                    onClick={() => handleSortDocument("cropType")}
                   >
                     <div className="flex items-center">
                       Crop Type
@@ -1762,7 +1753,7 @@ const CropsManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("crop")}
+                    onClick={() => handleSortDocument("crop")}
                   >
                     <div className="flex items-center">
                       Crop
@@ -1771,7 +1762,7 @@ const CropsManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("created_at")}
+                    onClick={() => handleSortDocument("created_at")}
                   >
                     <div className="flex items-center">
                       Upload Date
@@ -1782,24 +1773,24 @@ const CropsManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedIFS.length === 0 ? (
+                {paginatedDocuments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-sm">
-                      No IFS Document found.
+                      No Document found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedIFS.map((ifs) => (
-                    <TableRow key={ifs.id}>
+                  paginatedDocuments.map((doc) => (
+                    <TableRow key={doc.id}>
                       <TableCell>
-                        <span className="font-medium">{ifs.title}</span>
+                        <span className="font-medium">{doc.title}</span>
                       </TableCell>
-                      <TableCell>{ifs.author}</TableCell>
+                      <TableCell>{doc.author}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <FileText className="h-4 w-4 mr-2 text-red-600" />
                           <a
-                            href={ifs.file_url}
+                            href={doc.file_urls?.[0]}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
@@ -1809,32 +1800,32 @@ const CropsManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {ifs.crop_type ? (
+                        {doc.CropTypes ? (
                           <Badge
                             variant="secondary"
                             className="bg-green-600/10 text-green-600"
                           >
                             <Tag className="h-4 w-4 mr-1" />
-                            {ifs.crop_type.name}
+                            {doc.CropTypes.name}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {ifs.crops ? (
+                        {doc.Crops ? (
                           <Badge
                             variant="secondary"
                             className="bg-green-600/10 text-green-600"
                           >
                             <Tag className="h-4 w-4 mr-1" />
-                            {ifs.crops.name}
+                            {doc.Crops.name}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell>{formatDate(ifs.created_at)}</TableCell>
+                      <TableCell>{formatDate(doc.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1845,14 +1836,14 @@ const CropsManagement = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => handleEditIfs(ifs)}
+                              onClick={() => handleEditDocument(doc)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => openDeleteIfsDialog(ifs.id)}
+                              onClick={() => openDeleteDocumentDialog(doc.id)}
                               className="text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -1868,21 +1859,21 @@ const CropsManagement = () => {
             </Table>
           </div>
 
-          {/* IFS Pagination */}
+          {/* Document Pagination */}
           <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-between px-2 w-full">
             <div className="flex flex-wrap gap-2 items-center min-w-0 w-full md:w-auto">
               <div className="text-sm text-muted-foreground w-full sm:w-auto">
-                Showing {ifsStartIndex + 1}-
-                {Math.min(ifsEndIndex, filteredAndSortedIFS.length)} of{" "}
-                {filteredAndSortedIFS.length} IFS documents
+                Showing {documentStartIndex + 1}-
+                {Math.min(documentEndIndex, filteredAndSortedDocuments.length)}{" "}
+                of {filteredAndSortedDocuments.length} documents
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground">Show:</span>
                 <Select
-                  value={ifsPageSize.toString()}
+                  value={documentPageSize.toString()}
                   onValueChange={(value) => {
-                    setIfsPageSize(Number(value));
-                    setIfsCurrentPage(1);
+                    setDocumentPageSize(Number(value));
+                    setDocumentCurrentPage(1);
                   }}
                 >
                   <SelectTrigger className="w-20 h-8">
@@ -1901,20 +1892,20 @@ const CropsManagement = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIfsCurrentPage(ifsCurrentPage - 1)}
-                disabled={ifsCurrentPage === 1}
+                onClick={() => setDocumentCurrentPage(documentCurrentPage - 1)}
+                disabled={documentCurrentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
               <div className="text-sm font-medium">
-                Page {ifsCurrentPage} of {ifsTotalPages}
+                Page {documentCurrentPage} of {documentTotalPages}
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIfsCurrentPage(ifsCurrentPage + 1)}
-                disabled={ifsCurrentPage === ifsTotalPages}
+                onClick={() => setDocumentCurrentPage(documentCurrentPage + 1)}
+                disabled={documentCurrentPage === documentTotalPages}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -2002,33 +1993,33 @@ const CropsManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* IFS Delete Confirmation Dialog */}
+      {/* Document Delete Confirmation Dialog */}
       <Dialog
-        open={isDeleteIfsDialogOpen}
-        onOpenChange={setIsDeleteIfsDialogOpen}
+        open={isDeleteDocumentDialogOpen}
+        onOpenChange={setIsDeleteDocumentDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete IFS Document</DialogTitle>
+            <DialogTitle>Delete Document</DialogTitle>
           </DialogHeader>
           <div className="py-2">
-            Are you sure you want to delete this IFS entry? This action cannot
-            be undone.
+            Are you sure you want to delete this document? This action cannot be
+            undone.
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsDeleteIfsDialogOpen(false)}
-              disabled={deleteIfsLoading}
+              onClick={() => setIsDeleteDocumentDialogOpen(false)}
+              disabled={deleteDocumentLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteIfs}
-              disabled={deleteIfsLoading}
+              onClick={handleDeleteDocument}
+              disabled={deleteDocumentLoading}
             >
-              {deleteIfsLoading ? (
+              {deleteDocumentLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...

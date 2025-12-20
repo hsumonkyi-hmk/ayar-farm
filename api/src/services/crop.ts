@@ -31,7 +31,8 @@ export class CropService {
     public static async getAllCrops(): Promise<{crops: any}> {
         try {
             const crops = await prisma.crops.findMany({
-                orderBy: { created_at: 'desc' }
+                orderBy: { created_at: 'desc' },
+                include: { CropTypes: true }
             })
 
             return { crops };
@@ -77,7 +78,8 @@ export class CropService {
                     name,
                     description,
                     image_urls,
-                }
+                },
+                include: { CropTypes: true }
             });
 
             return { crop }
@@ -112,7 +114,8 @@ export class CropService {
                     name,
                     description,
                     image_urls,
-                }
+                },
+                include: { CropTypes: true }
             });
 
             return { crop }

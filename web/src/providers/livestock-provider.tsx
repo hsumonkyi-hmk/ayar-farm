@@ -1,41 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
+import api from "@/lib/api";
 
-export interface Livestock {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { Livestock, Document } from "@/lib/interface";
 
-export interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  livestocks?: Livestock;
-}
-
-export interface LivestockContextType {
+interface LivestockContextType {
   livestocks: Livestock[];
-  ifsList: IFS[];
+  documents: Document[];
 
   isLoading: boolean;
   isUploadingFile: boolean;
   error: string | null;
 
   fetchLivestock: () => Promise<void>;
-  fetchIFS: () => Promise<IFS[]>;
+  fetchDocuments: () => Promise<Document[]>;
   refreshAll: () => Promise<void>;
 
   createLivestock: (data: FormData) => Promise<boolean>;
@@ -43,14 +22,14 @@ export interface LivestockContextType {
   deleteLivestock: (id: string) => Promise<boolean>;
   bulkDeleteLivestock: (ids: string[]) => Promise<boolean>;
 
-  createIFS: (data: FormData) => Promise<boolean>;
-  updateIFS: (id: string, data: FormData) => Promise<boolean>;
-  deleteIFS: (id: string) => Promise<boolean>;
+  createDocument: (data: FormData) => Promise<boolean>;
+  updateDocument: (id: string, data: FormData) => Promise<boolean>;
+  deleteDocument: (id: string) => Promise<boolean>;
 
   getLivestockById: (id: string) => Livestock | undefined;
-  getIFSById: (id: string) => IFS | undefined;
+  getDocumentById: (id: string) => Document | undefined;
   getTotalLivestockCount: () => number;
-  getTotalIFSCount: () => number;
+  getTotalDocumentsCount: () => number;
 }
 
 const LivestockContext = createContext<LivestockContextType | undefined>(
@@ -61,13 +40,11 @@ interface LivestockProviderProps {
   children: ReactNode;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   children,
 }) => {
   const [livestocks, setLivestocks] = useState<Livestock[]>([]);
-  const [ifsList, setIFSList] = useState<IFS[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isUploadingFile, setIsUploadingFile] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,45 +52,29 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   const fetchLivestock = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/livestock/livestock/`);
-      if (!response.ok) throw new Error("Failed to fetch livestock");
-      const data = await response.json();
-      setLivestocks(data.livestock);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const response = await api.get("/livestock/livestock/");
+      setLivestocks(response.data.livestock);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchIFS = async (): Promise<IFS[]> => {
+  const fetchDocuments = async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/ifs/`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data && typeof data === "object") {
-        const fetchedIFS = data.ifsList || [];
-        setIFSList(fetchedIFS);
-
-        if (!data.ifsList && !data.error) {
-          console.warn("Received empty response for IFS");
-        }
-
-        return fetchedIFS;
-      } else {
-        throw new Error("Invalid response format");
-      }
-    } catch (err) {
+      const response = await api.get("/document/documents");
+      const fetchedDocuments = response.data.documents || [];
+      setDocuments(fetchedDocuments);
+      return fetchedDocuments;
+    } catch (err: any) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch IFS data";
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to fetch documents";
       setError(errorMessage);
-      console.error("Fetch IFS error:", err);
+      console.error("Fetch documents error:", err);
       throw err;
     }
   };
@@ -121,7 +82,10 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   const refreshAll = async () => {
     setIsLoading(true);
     try {
-      const results = await Promise.allSettled([fetchLivestock(), fetchIFS()]);
+      const results = await Promise.allSettled([
+        fetchLivestock(),
+        fetchDocuments(),
+      ]);
 
       const failures = results.filter((result) => result.status === "rejected");
       const successes = results.filter(
@@ -129,11 +93,10 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
       );
 
       let totalDataCount = 0;
-      successes.forEach((result) => {
-        if (result.value && Array.isArray(result.value)) {
-          totalDataCount += result.value.length;
-        }
-      });
+      // Count livestock
+      if (livestocks.length > 0) totalDataCount += livestocks.length;
+      // Count documents
+      if (documents.length > 0) totalDataCount += documents.length;
 
       if (failures.length === 0) {
         if (totalDataCount > 0) {
@@ -162,26 +125,16 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   const createLivestock = async (data: FormData): Promise<boolean> => {
     setIsUploadingFile(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/livestock/livestock/`, {
-        method: "POST",
-        body: data,
+      await api.post("/livestock/livestock/", data, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      if (!response.ok) {
-        let errorText = await response.text();
-        console.error(
-          "Failed to create livestock:",
-          response.status,
-          errorText
-        );
-        throw new Error(
-          `Failed to create livestock: ${response.status} ${errorText}`
-        );
-      }
       toast.success("Livestock created successfully!");
       await fetchLivestock();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     } finally {
       setIsUploadingFile(false);
@@ -194,19 +147,16 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   ): Promise<boolean> => {
     setIsUploadingFile(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/livestock/livestock/${id}`,
-        {
-          method: "PUT",
-          body: data,
-        }
-      );
-      if (!response.ok) throw new Error("Failed to update livestock");
+      await api.put(`/livestock/livestock/${id}`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       toast.success("Livestock updated successfully!");
       await fetchLivestock();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     } finally {
       setIsUploadingFile(false);
@@ -215,160 +165,131 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
 
   const deleteLivestock = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/livestock/livestock/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-      if (!response.ok) throw new Error("Failed to delete livestock");
+      await api.delete(`/livestock/livestock/${id}`);
       toast.success("Livestock deleted successfully!");
       await fetchLivestock();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     }
   };
 
   const bulkDeleteLivestock = async (ids: string[]): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/livestock/livestock/`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
-      });
-      if (!response.ok) throw new Error("Failed to bulk delete livestock");
-      toast.success("Livestock deleted successfully!");
+      await api.post("/livestock/livestock/bulk-delete", { ids });
+      toast.success("Selected livestock deleted successfully!");
       await fetchLivestock();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     }
   };
 
-  const getLivestockById = (id: string): Livestock | undefined => {
-    return livestocks.find((livestock) => livestock.id === id);
-  };
-
-  const getTotalLivestockCount = (): number => {
-    return livestocks.length;
-  };
-
-  const createIFS = async (data: FormData): Promise<boolean> => {
+  // CRUD operations for Documents
+  const createDocument = async (data: FormData): Promise<boolean> => {
     setIsUploadingFile(true);
-    console.log("Creating IFS with data:", data);
-    console.log("API_BASE_URL:", `${API_BASE_URL}/ifs/`);
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/`, {
-        method: "POST",
-        body: data,
-      });
-      if (!response.ok) {
-        let errorText = await response.text();
-        console.error("Failed to create ifs:", response.status, errorText);
-        throw new Error(
-          `Failed to create ifs: ${response.status} ${errorText}`
-        );
-      }
-      toast.success("IFS created successfully!");
-      await fetchIFS();
+      const token = localStorage.getItem("token");
+      await api.post("/document/documents", data, token || undefined);
+      toast.success("Document created successfully!");
+      await fetchDocuments();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     } finally {
       setIsUploadingFile(false);
     }
   };
 
-  const updateIFS = async (id: string, data: FormData): Promise<boolean> => {
+  const updateDocument = async (
+    id: string,
+    data: FormData
+  ): Promise<boolean> => {
     setIsUploadingFile(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "PUT",
-        body: data,
-      });
-      if (!response.ok) throw new Error("Failed to update IFS");
-      toast.success("IFS updated successfully!");
-      await fetchIFS();
+      const token = localStorage.getItem("token");
+      await api.put(`/document/documents/${id}`, data, token || undefined);
+      toast.success("Document updated successfully!");
+      await fetchDocuments();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     } finally {
       setIsUploadingFile(false);
     }
   };
 
-  const deleteIFS = async (id: string): Promise<boolean> => {
+  const deleteDocument = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete IFS");
-      toast.success("IFS deleted successfully!");
-      await fetchIFS();
+      const token = localStorage.getItem("token");
+      await api.delete(`/document/documents/${id}`, token || undefined);
+      toast.success("Document deleted successfully!");
+      await fetchDocuments();
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     }
   };
 
-  const getIFSById = (id: string): IFS | undefined => {
-    return ifsList.find((ifs) => ifs.id === id);
-  };
+  const getLivestockById = (id: string) => livestocks.find((l) => l.id === id);
 
-  const getTotalIFSCount = (): number => {
-    const livestockIfs = ifsList.filter((ifs) => ifs.livestock_id);
-    return livestockIfs.length;
-  };
+  const getDocumentById = (id: string) => documents.find((d) => d.id === id);
+
+  const getTotalLivestockCount = () => livestocks.length;
+  const getTotalDocumentsCount = () => documents.length;
 
   useEffect(() => {
-    refreshAll();
+    fetchLivestock();
+    fetchDocuments();
   }, []);
 
-  const value: LivestockContextType = {
-    livestocks,
-    ifsList,
-
-    isLoading,
-    isUploadingFile,
-    error,
-
-    fetchLivestock,
-    fetchIFS,
-    refreshAll,
-
-    createLivestock,
-    updateLivestock,
-    deleteLivestock,
-    bulkDeleteLivestock,
-
-    createIFS,
-    updateIFS,
-    deleteIFS,
-
-    getLivestockById,
-    getIFSById,
-    getTotalLivestockCount,
-    getTotalIFSCount,
-  };
-
   return (
-    <LivestockContext.Provider value={value}>
+    <LivestockContext.Provider
+      value={{
+        livestocks,
+        documents,
+        isLoading,
+        isUploadingFile,
+        error,
+        fetchLivestock,
+        fetchDocuments,
+        refreshAll,
+        createLivestock,
+        updateLivestock,
+        deleteLivestock,
+        bulkDeleteLivestock,
+        createDocument,
+        updateDocument,
+        deleteDocument,
+        getLivestockById,
+        getDocumentById,
+        getTotalLivestockCount,
+        getTotalDocumentsCount,
+      }}
+    >
       {children}
     </LivestockContext.Provider>
   );
 };
 
-export const useLivestock = (): LivestockContextType => {
+export const useLivestock = () => {
   const context = useContext(LivestockContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useLivestock must be used within a LivestockProvider");
   }
   return context;

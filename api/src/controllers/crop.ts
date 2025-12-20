@@ -162,4 +162,40 @@ export class CropController {
             console.error("Error deleting crop(s):", error)
         }
     }
+
+    public async bulkDeleteCropTypes(req: Request, res: Response): Promise<void> {
+        try {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids)) {
+                res.status(400).json({ message: 'Invalid ids provided' });
+                return;
+            }
+
+            await CropService.deleteCropTypes(ids);
+            
+            res.status(200).json({ message: 'Crop types deleted successfully' });
+            return;
+        } catch (error) {
+            res.status(500).json({ message: `Error deleting crop types: ${error}` })
+            console.error("Error deleting crop types:", error)
+        }
+    }
+
+    public async bulkDeleteCrops(req: Request, res: Response): Promise<void> {
+        try {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids)) {
+                res.status(400).json({ message: 'Invalid ids provided' });
+                return;
+            }
+
+            await CropService.deleteCrops(ids);
+            
+            res.status(200).json({ message: 'Crops deleted successfully' });
+            return;
+        } catch (error) {
+            res.status(500).json({ message: `Error deleting crops: ${error}` })
+            console.error("Error deleting crops:", error)
+        }
+    }
 }

@@ -26,6 +26,69 @@ export class DocumentService {
         }
     }
 
+    public static async getAllDocumentByType(type: string): Promise<{ documents: any }> {
+        try {
+            let documents;
+            if (type === "crop") {
+                documents = await prisma.documents.findMany({
+                    where: {
+                        OR: [
+                            { crop_type_id: { not: null } },
+                            { crop_id: { not: null } }
+                        ]
+                    },
+                    include: {
+                        CropTypes: true,
+                        Crops: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+            } else if (type === "livestock") {
+                documents = await prisma.documents.findMany({
+                    where: {
+                        OR: [
+                            { livestock_type_id: { not: null } },
+                            { livestock_id: { not: null } }
+                        ]
+                    },
+                    include: {
+                        LivestockTypes: true,
+                        Livestocks: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+            } else if (type === "fishery") {
+                documents = await prisma.documents.findMany({
+                    where: {
+                        fish_id: { not: null }
+                    },
+                    include: {
+                        Fishs: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+            } else if (type === "machine") {
+                documents = await prisma.documents.findMany({
+                    where: {
+                        OR: [
+                            { machine_type_id: { not: null } },
+                            { machine_id: { not: null } }
+                        ]
+                    },
+                    include: {
+                        MachineTypes: true,
+                        Machines: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                });
+            }
+
+            return { documents }
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
     public static async addNewDocument(title: string, author: string, file_urls: string[], crop_type_id: string, livestock_type_id: string, machine_type_id: string, crop_id: string, livestock_id: string, machine_id: string, fish_id: string ): Promise<{ document: any }> {
         try {
             const document = await prisma.documents.create({

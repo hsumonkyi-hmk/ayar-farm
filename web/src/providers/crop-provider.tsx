@@ -1,51 +1,15 @@
+import { api } from "@/lib/api";
+import type { Crop, CropType, Document } from "@/lib/interface";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-
-// Type definitions based on the crop management system
-export interface CropType {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-  _count?: {
-    crops: number;
-  };
-}
-
-export interface Crop {
-  id: string;
-  name: string;
-  image_url: string;
-  type_id: string;
-  created_at: string;
-  updated_at: string;
-  type: CropType;
-}
-
-export interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  crop_type?: CropType;
-  crops?: Crop;
-}
+import { useAuth } from "./auth-provider";
 
 interface CropContextType {
   // Data
   cropTypes: CropType[];
   crops: Crop[];
-  ifsList: IFS[];
+  documents: Document[];
 
   // Loading states
   isLoading: boolean;
@@ -55,7 +19,7 @@ interface CropContextType {
   // Fetch functions
   fetchCropTypes: () => Promise<CropType[]>;
   fetchCrops: () => Promise<Crop[]>;
-  fetchIFS: () => Promise<IFS[]>;
+  fetchDocuments: () => Promise<Document[]>;
   refreshAll: () => Promise<void>;
 
   // CRUD operations for Crop Types
@@ -70,21 +34,21 @@ interface CropContextType {
   deleteCrop: (id: string) => Promise<boolean>;
   bulkDeleteCrops: (ids: string[]) => Promise<boolean>;
 
-  // CRUD operations for IFS
-  createIFS: (data: FormData) => Promise<boolean>;
-  updateIFS: (id: string, data: FormData) => Promise<boolean>;
-  deleteIFS: (id: string) => Promise<boolean>;
+  // CRUD operations for Documents
+  createDocument: (data: FormData) => Promise<boolean>;
+  updateDocument: (id: string, data: FormData) => Promise<boolean>;
+  deleteDocument: (id: string) => Promise<boolean>;
 
   // Utility functions
   getCropTypeById: (id: string) => CropType | undefined;
   getCropById: (id: string) => Crop | undefined;
-  getIFSById: (id: string) => IFS | undefined;
+  getDocumentById: (id: string) => Document | undefined;
   getCropsByType: (typeId: string) => Crop[];
-  getIFSByCropType: (typeId: string) => IFS[];
-  getIFSByCrop: (typeId: string) => IFS[];
+  getDocumentsByCropType: (typeId: string) => Document[];
+  getDocumentsByCrop: (typeId: string) => Document[];
   getTotalCropTypes: () => number;
   getTotalCrops: () => number;
-  getTotalIFS: () => number;
+  getTotalDocuments: () => number;
 }
 
 const CropContext = createContext<CropContextType | undefined>(undefined);
@@ -93,12 +57,10 @@ interface CropProviderProps {
   children: ReactNode;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   const [cropTypes, setCropTypes] = useState<CropType[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
-  const [ifsList, setIfsList] = useState<IFS[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,19 +69,13 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   const fetchCropTypes = async (): Promise<CropType[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/crop/crop-types`);
+      const response = await api.get("/cropsandpulses/croptypes/");
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data && typeof data === "object") {
-        const fetchedCropTypes = data.cropTypes || [];
+      if (response && response.data) {
+        const fetchedCropTypes = response.data || [];
         setCropTypes(fetchedCropTypes);
 
-        if (!data.cropTypes && !data.error) {
+        if (!response.data && !response.error) {
           console.warn("Received empty response for crop types");
         }
 
@@ -139,19 +95,17 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   const fetchCrops = async (): Promise<Crop[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/crop/crops`);
+      const response = await api.get("/cropsandpulses/crops");
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data && typeof data === "object") {
-        const fetchedCrops = data.crops || [];
+      if (response && response.data) {
+        const fetchedCrops = (response.data || []).map((crop: any) => ({
+          ...crop,
+          type: crop.CropTypes,
+          type_id: crop.crop_type_id,
+        }));
         setCrops(fetchedCrops);
 
-        if (!data.crops && !data.error) {
+        if (!response.data && !response.error) {
           console.warn("Received empty response for crops");
         }
 
@@ -168,34 +122,30 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     }
   };
 
-  const fetchIFS = async (): Promise<IFS[]> => {
+  const fetchDocuments = async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/ifs/`);
+      const response = await api.get("/document/documents?type=crop");
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      console.log(response.documents);
 
-      const data = await response.json();
+      if (response && response.documents) {
+        const fetchedDocuments = response.documents || [];
+        setDocuments(fetchedDocuments);
 
-      if (data && typeof data === "object") {
-        const fetchedIFS = data.ifsList || [];
-        setIfsList(fetchedIFS);
-
-        if (!data.ifsList && !data.error) {
-          console.warn("Received empty response for IFS");
+        if (!response.documents && !response.error) {
+          console.warn("Received empty response for documents");
         }
 
-        return fetchedIFS;
+        return fetchedDocuments;
       } else {
         throw new Error("Invalid response format");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch IFS data";
+        err instanceof Error ? err.message : "Failed to fetch documents";
       setError(errorMessage);
-      console.error("Fetch IFS error:", err);
+      console.error("Fetch documents error:", err);
       throw err;
     }
   };
@@ -207,7 +157,7 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
       const results = await Promise.allSettled([
         fetchCropTypes(),
         fetchCrops(),
-        fetchIFS(),
+        fetchDocuments(),
       ]);
 
       const failures = results.filter((result) => result.status === "rejected");
@@ -247,18 +197,19 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   const createCropType = async (formData: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/crop/crop-types`, {
-        method: "POST",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "/cropsandpulses/croptypes",
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response && !response.error) {
         toast.success("Crop type created successfully");
         await fetchCropTypes();
         return true;
       } else {
-        throw new Error(data.error || "Failed to create crop type");
+        throw new Error(response.error || "Failed to create crop type");
       }
     } catch (err) {
       const errorMessage =
@@ -276,18 +227,19 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/crop/crop-types/${id}`, {
-        method: "PUT",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.put(
+        `/cropsandpulses/croptypes/${id}`,
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response && !response.error) {
         toast.success("Crop type updated successfully");
         await fetchCropTypes();
         return true;
       } else {
-        throw new Error(data.error || "Failed to update crop type");
+        throw new Error(response.error || "Failed to update crop type");
       }
     } catch (err) {
       const errorMessage =
@@ -301,16 +253,17 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
 
   const deleteCropType = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/crop/crop-types/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (response.ok) {
+      const token = localStorage.getItem("token");
+      const response = await api.delete(
+        `/cropsandpulses/croptypes/${id}`,
+        token || undefined
+      );
+      if (response && !response.error) {
         toast.success("Crop type deleted successfully");
         await Promise.all([fetchCropTypes(), fetchCrops()]);
         return true;
       } else {
-        throw new Error(data.error || "Failed to delete crop type");
+        throw new Error(response.error || "Failed to delete crop type");
       }
     } catch (err) {
       const errorMessage =
@@ -323,21 +276,19 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   const bulkDeleteCropTypes = async (ids: string[]): Promise<boolean> => {
     try {
       console.log("Selected Crop Types for bulk delete:", ids);
-      const response = await fetch(`${API_BASE_URL}/crop/crop-types/`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.delete(
+        "/cropsandpulses/croptypes",
+        token || undefined,
+        { ids }
+      );
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response && !response.error) {
         toast.success(`${ids.length} crop types deleted successfully`);
         await Promise.all([fetchCropTypes(), fetchCrops()]);
         return true;
       } else {
-        throw new Error(data.error || "Failed to delete crop types");
+        throw new Error(response.error || "Failed to delete crop types");
       }
     } catch (err) {
       const errorMessage =
@@ -350,18 +301,19 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   const createCrop = async (formData: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/crop/crops`, {
-        method: "POST",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "/cropsandpulses/crops",
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response && !response.error) {
         toast.success("Crop created successfully");
         await fetchCrops();
         return true;
       } else {
-        throw new Error(data.error || "Failed to create crop");
+        throw new Error(response.error || "Failed to create crop");
       }
     } catch (err) {
       const errorMessage =
@@ -379,18 +331,19 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/crop/crops/${id}`, {
-        method: "PUT",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.put(
+        `/cropsandpulses/crops/${id}`,
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response && !response.error) {
         toast.success("Crop updated successfully");
         await fetchCrops();
         return true;
       } else {
-        throw new Error(data.error || "Failed to update crop");
+        throw new Error(response.error || "Failed to update crop");
       }
     } catch (err) {
       const errorMessage =
@@ -404,16 +357,17 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
 
   const deleteCrop = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/crop/crops/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (response.ok) {
+      const token = localStorage.getItem("token");
+      const response = await api.delete(
+        `/cropsandpulses/crops/${id}`,
+        token || undefined
+      );
+      if (response && !response.error) {
         toast.success("Crop deleted successfully");
         await fetchCrops();
         return true;
       } else {
-        throw new Error(data.error || "Failed to delete crop");
+        throw new Error(response.error || "Failed to delete crop");
       }
     } catch (err) {
       const errorMessage =
@@ -429,21 +383,19 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
         throw new Error("Invalid request: IDs array is required");
       }
 
-      const response = await fetch(`${API_BASE_URL}/crop/crops/`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.delete(
+        "/cropsandpulses/crops",
+        token || undefined,
+        { ids }
+      );
 
-      const data = await response.json();
-      if (response.ok) {
+      if (response && !response.error) {
         toast.success(`${ids.length} crops deleted successfully`);
         await fetchCrops();
         return true;
       } else {
-        throw new Error(data.error || "Failed to delete crops");
+        throw new Error(response.error || "Failed to delete crops");
       }
     } catch (err) {
       const errorMessage =
@@ -453,26 +405,27 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     }
   };
 
-  // IFS CRUD operations
-  const createIFS = async (formData: FormData): Promise<boolean> => {
+  // Document CRUD operations
+  const createDocument = async (formData: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/ifs/`, {
-        method: "POST",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "/document/documents",
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("IFS document uploaded successfully");
-        await fetchIFS();
+      if (response && !response.error) {
+        toast.success("Document uploaded successfully");
+        await fetchDocuments();
         return true;
       } else {
-        throw new Error(data.error || "Failed to upload IFS document");
+        throw new Error(response.error || "Failed to upload document");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to upload IFS document";
+        err instanceof Error ? err.message : "Failed to upload document";
       toast.error(errorMessage);
       return false;
     } finally {
@@ -480,28 +433,29 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     }
   };
 
-  const updateIFS = async (
+  const updateDocument = async (
     id: string,
     formData: FormData
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "PUT",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.put(
+        `/document/documents/${id}`,
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("IFS document updated successfully");
-        await fetchIFS();
+      if (response && !response.error) {
+        toast.success("Document updated successfully");
+        await fetchDocuments();
         return true;
       } else {
-        throw new Error(data.error || "Failed to update IFS document");
+        throw new Error(response.error || "Failed to update document");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to update IFS document";
+        err instanceof Error ? err.message : "Failed to update document";
       toast.error(errorMessage);
       return false;
     } finally {
@@ -509,22 +463,23 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     }
   };
 
-  const deleteIFS = async (id: string): Promise<boolean> => {
+  const deleteDocument = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("IFS document deleted successfully");
-        await fetchIFS();
+      const token = localStorage.getItem("token");
+      const response = await api.delete(
+        `/document/documents/${id}`,
+        token || undefined
+      );
+      if (response && !response.error) {
+        toast.success("Document deleted successfully");
+        await fetchDocuments();
         return true;
       } else {
-        throw new Error(data.error || "Failed to delete IFS document");
+        throw new Error(response.error || "Failed to delete document");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to delete IFS document";
+        err instanceof Error ? err.message : "Failed to delete document";
       toast.error(errorMessage);
       return false;
     }
@@ -539,20 +494,20 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     return crops.find((crop) => crop.id === id);
   };
 
-  const getIFSById = (id: string): IFS | undefined => {
-    return ifsList.find((ifs) => ifs.id === id);
-  };
-
   const getCropsByType = (typeId: string): Crop[] => {
     return crops.filter((crop) => crop.type_id === typeId);
   };
 
-  const getIFSByCropType = (typeId: string): IFS[] => {
-    return ifsList.filter((ifs) => ifs.id === typeId);
+  const getDocumentById = (id: string): Document | undefined => {
+    return documents.find((doc) => doc.id === id);
   };
 
-  const getIFSByCrop = (cropId: string): IFS[] => {
-    return ifsList.filter((ifs) => ifs.crop_id === cropId);
+  const getDocumentsByCropType = (typeId: string): Document[] => {
+    return documents.filter((doc) => doc.crop_type_id === typeId);
+  };
+
+  const getDocumentsByCrop = (cropId: string): Document[] => {
+    return documents.filter((doc) => doc.crop_id === cropId);
   };
 
   const getTotalCropTypes = (): number => {
@@ -563,9 +518,8 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     return crops.length;
   };
 
-  const getTotalIFS = (): number => {
-    const cropIFS = ifsList.filter((ifs) => ifs.crop_id);
-    return cropIFS.length;
+  const getTotalDocuments = (): number => {
+    return documents.length;
   };
 
   // Auto-fetch data on mount
@@ -577,7 +531,7 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     // Data
     cropTypes,
     crops,
-    ifsList,
+    documents,
 
     // Loading states
     isLoading,
@@ -587,7 +541,7 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     // Fetch functions
     fetchCropTypes,
     fetchCrops,
-    fetchIFS,
+    fetchDocuments,
     refreshAll,
 
     // CRUD operations for Crop Types
@@ -602,21 +556,21 @@ export const CropProvider: React.FC<CropProviderProps> = ({ children }) => {
     deleteCrop,
     bulkDeleteCrops,
 
-    // CRUD operations for IFS
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    // CRUD operations for Documents
+    createDocument,
+    updateDocument,
+    deleteDocument,
 
     // Utility functions
     getCropTypeById,
     getCropById,
-    getIFSById,
+    getDocumentById,
     getCropsByType,
-    getIFSByCrop,
-    getIFSByCropType,
+    getDocumentsByCrop,
+    getDocumentsByCropType,
     getTotalCropTypes,
     getTotalCrops,
-    getTotalIFS,
+    getTotalDocuments,
   };
 
   return <CropContext.Provider value={value}>{children}</CropContext.Provider>;

@@ -21,33 +21,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-
-interface ActiveVideo {
-  id: string;
-  title: string;
-  description: string;
-  resource_url: string;
-  filename: string;
-  size: number;
-  uploaded_at: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-interface Application {
-  id: string;
-  title: string;
-  description: string;
-  resource_url: string[];
-  filename: string;
-  size: number;
-  version: string;
-  platform: string;
-  is_active: boolean;
-  download_count: number;
-  uploaded_at: string;
-}
+import type { ActiveVideo, Application } from "@/lib/interface";
 
 const HomePage = () => {
   const [activeVideo, setActiveVideo] = useState<ActiveVideo | null>(null);

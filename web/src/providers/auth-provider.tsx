@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { initSocket, disconnectSocket } from "@/lib/socket";
 
 type AuthContextType = {
   user: any;
@@ -39,12 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
   }, []);
-
-  useEffect(() => {
-    if (session?.access_token) {
-      initSocket(session.access_token);
-    }
-  }, [session]);
 
   const signIn = async (identifier: string, password: string) => {
     setIsLoading(true);
@@ -106,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     setIsLoading(true);
     try {
-      disconnectSocket();
       setUser(null);
       setSession(null);
       localStorage.removeItem("token");

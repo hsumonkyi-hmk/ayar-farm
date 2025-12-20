@@ -61,47 +61,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Type definitions based on the livestock provider
-interface Livestock {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  livestocks?: Livestock;
-}
+import type { Livestock, Document } from "@/lib/interface";
 
 const LivestockManagement = () => {
   const {
     livestocks,
-    ifsList,
+    documents,
     isLoading,
     isUploadingFile,
     createLivestock,
     updateLivestock,
     deleteLivestock,
     bulkDeleteLivestock,
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    createDocument,
+    updateDocument,
+    deleteDocument,
     getTotalLivestockCount,
-    getTotalIFSCount,
+    getTotalDocumentsCount,
     refreshAll,
   } = useLivestock();
 
@@ -117,13 +93,13 @@ const LivestockManagement = () => {
   });
   const [selectedLivestock, setSelectedLivestock] = useState<string[]>([]);
 
-  // IFS UI state
-  const [ifsSearchTerm, setIfsSearchTerm] = useState("");
-  const [selectedIfsLivestock, setSelectedIfsLivestock] =
+  // Document UI state
+  const [documentSearchTerm, setDocumentSearchTerm] = useState("");
+  const [selectedDocumentLivestock, setSelectedDocumentLivestock] =
     useState<string>("all_livestock");
-  const [isIfsDialogOpen, setIsIfsDialogOpen] = useState(false);
-  const [editingIfs, setEditingIfs] = useState<IFS | null>(null);
-  const [ifsFormData, setIfsFormData] = useState({
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [documentFormData, setDocumentFormData] = useState({
     livestock_id: "none",
     title: "",
     author: "",
@@ -138,11 +114,13 @@ const LivestockManagement = () => {
     "asc"
   );
 
-  // IFS pagination and sorting state
-  const [ifsCurrentPage, setIfsCurrentPage] = useState(1);
-  const [ifsPageSize, setIfsPageSize] = useState(10);
-  const [ifsSortBy, setIfsSortBy] = useState<string>("");
-  const [ifsSortOrder, setIfsSortOrder] = useState<"asc" | "desc">("asc");
+  // Document pagination and sorting state
+  const [documentCurrentPage, setDocumentCurrentPage] = useState(1);
+  const [documentPageSize, setDocumentPageSize] = useState(10);
+  const [documentSortBy, setDocumentSortBy] = useState<string>("");
+  const [documentSortOrder, setDocumentSortOrder] = useState<"asc" | "desc">(
+    "asc"
+  );
 
   // Delete confirmation dialog states
   const [deleteLivestockId, setDeleteLivestockId] = useState<string | null>(
@@ -150,10 +128,11 @@ const LivestockManagement = () => {
   );
   const [isDeleteLivestockDialogOpen, setIsDeleteLivestockDialogOpen] =
     useState(false);
-  const [deleteIfsId, setDeleteIfsId] = useState<string | null>(null);
-  const [isDeleteIfsDialogOpen, setIsDeleteIfsDialogOpen] = useState(false);
+  const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
+  const [isDeleteDocumentDialogOpen, setIsDeleteDocumentDialogOpen] =
+    useState(false);
   const [deleteLivestockLoading, setDeleteLivestockLoading] = useState(false);
-  const [deleteIfsLoading, setDeleteIfsLoading] = useState(false);
+  const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions for Livestock
   const filteredLivestock = livestocks.filter((livestock) =>
@@ -196,65 +175,68 @@ const LivestockManagement = () => {
     livestockEndIndex
   );
 
-  const ifsListWithLivestock = ifsList.map((ifs) => ({
-    ...ifs,
+  const documentsWithLivestock = documents.map((doc) => ({
+    ...doc,
     livestocks:
-      ifs.livestocks || livestocks.find((l) => l.id === ifs.livestock_id),
+      doc.livestocks || livestocks.find((l) => l.id === doc.livestock_id),
   }));
 
-  // Filter and sort functions for IFS (only show those with livestock_id)
-  const filteredIFS = ifsListWithLivestock
-    .filter((ifs) => ifs.livestock_id != null)
-    .filter((ifs) => {
-      const searchTerm = ifsSearchTerm.toLowerCase();
+  // Filter and sort functions for Document (only show those with livestock_id)
+  const filteredDocuments = documentsWithLivestock
+    .filter((doc) => doc.livestock_id != null)
+    .filter((doc) => {
+      const searchTerm = documentSearchTerm.toLowerCase();
       const matchesSearch =
-        ifs.livestocks?.name?.toLowerCase().includes(searchTerm) ||
-        ifs.title?.toLowerCase().includes(searchTerm) ||
-        ifs.author?.toLowerCase().includes(searchTerm);
+        doc.livestocks?.name?.toLowerCase().includes(searchTerm) ||
+        doc.title?.toLowerCase().includes(searchTerm) ||
+        doc.author?.toLowerCase().includes(searchTerm);
 
       const matchesLivestock =
-        selectedIfsLivestock === "" ||
-        selectedIfsLivestock === "all_livestock" ||
-        ifs.livestock_id === selectedIfsLivestock;
+        selectedDocumentLivestock === "" ||
+        selectedDocumentLivestock === "all_livestock" ||
+        doc.livestock_id === selectedDocumentLivestock;
 
       return matchesSearch && matchesLivestock;
     });
 
-  const filteredAndSortedIFS = filteredIFS.sort((a, b) => {
-    if (!ifsSortBy) return 0;
+  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
+    if (!documentSortBy) return 0;
 
     let aValue: any = a;
     let bValue: any = b;
 
-    if (ifsSortBy === "title") {
+    if (documentSortBy === "title") {
       aValue = a.title;
       bValue = b.title;
-    } else if (ifsSortBy === "author") {
+    } else if (documentSortBy === "author") {
       aValue = a.author;
       bValue = b.author;
-    } else if (ifsSortBy === "livestock") {
+    } else if (documentSortBy === "livestock") {
       aValue = a.livestocks?.name || "";
       bValue = b.livestocks?.name || "";
-    } else if (ifsSortBy === "created_at") {
+    } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);
     }
 
-    if (ifsSortOrder === "asc") {
+    if (documentSortOrder === "asc") {
       return aValue > bValue ? 1 : -1;
     } else {
       return aValue < bValue ? 1 : -1;
     }
   });
 
-  // IFS pagination logic
-  const ifsTotalPages = Math.max(
+  // Document pagination logic
+  const documentTotalPages = Math.max(
     1,
-    Math.ceil(filteredAndSortedIFS.length / ifsPageSize)
+    Math.ceil(filteredAndSortedDocuments.length / documentPageSize)
   );
-  const ifsStartIndex = (ifsCurrentPage - 1) * ifsPageSize;
-  const ifsEndIndex = ifsStartIndex + ifsPageSize;
-  const paginatedIFS = filteredAndSortedIFS.slice(ifsStartIndex, ifsEndIndex);
+  const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
+  const documentEndIndex = documentStartIndex + documentPageSize;
+  const paginatedDocuments = filteredAndSortedDocuments.slice(
+    documentStartIndex,
+    documentEndIndex
+  );
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -262,8 +244,13 @@ const LivestockManagement = () => {
   }, [livestockSearchTerm, livestockSortBy, livestockSortOrder]);
 
   useEffect(() => {
-    setIfsCurrentPage(1);
-  }, [ifsSearchTerm, selectedIfsLivestock, ifsSortBy, ifsSortOrder]);
+    setDocumentCurrentPage(1);
+  }, [
+    documentSearchTerm,
+    selectedDocumentLivestock,
+    documentSortBy,
+    documentSortOrder,
+  ]);
 
   // Auto-adjust page if current page exceeds total pages
   useEffect(() => {
@@ -273,10 +260,10 @@ const LivestockManagement = () => {
   }, [livestockCurrentPage, livestockTotalPages]);
 
   useEffect(() => {
-    if (ifsCurrentPage > ifsTotalPages && ifsTotalPages > 0) {
-      setIfsCurrentPage(ifsTotalPages);
+    if (documentCurrentPage > documentTotalPages && documentTotalPages > 0) {
+      setDocumentCurrentPage(documentTotalPages);
     }
-  }, [ifsCurrentPage, ifsTotalPages]);
+  }, [documentCurrentPage, documentTotalPages]);
 
   // Livestock CRUD operations
   const handleLivestockSubmit = async (e: React.FormEvent) => {
@@ -312,47 +299,50 @@ const LivestockManagement = () => {
     setDeleteLivestockId(null);
   };
 
-  // IFS CRUD operations
-  const handleIfsSubmit = async (e: React.FormEvent) => {
+  // Document CRUD operations
+  const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ifsFormData.title || !ifsFormData.author) {
+    if (!documentFormData.title || !documentFormData.author) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    if (!ifsFormData.pdfFile && !editingIfs) {
+    if (!documentFormData.pdfFile && !editingDocument) {
       toast.error("Please select a PDF file");
       return;
     }
 
     const formData = new FormData();
-    if (ifsFormData.livestock_id && ifsFormData.livestock_id !== "none") {
-      formData.append("livestock_id", ifsFormData.livestock_id);
+    if (
+      documentFormData.livestock_id &&
+      documentFormData.livestock_id !== "none"
+    ) {
+      formData.append("livestock_id", documentFormData.livestock_id);
     }
-    formData.append("title", ifsFormData.title);
-    formData.append("author", ifsFormData.author);
-    if (ifsFormData.pdfFile) {
-      formData.append("file", ifsFormData.pdfFile);
+    formData.append("title", documentFormData.title);
+    formData.append("author", documentFormData.author);
+    if (documentFormData.pdfFile) {
+      formData.append("file_urls", documentFormData.pdfFile);
     }
 
-    const success = editingIfs
-      ? await updateIFS(editingIfs.id, formData)
-      : await createIFS(formData);
+    const success = editingDocument
+      ? await updateDocument(editingDocument.id, formData)
+      : await createDocument(formData);
 
     if (success) {
-      setIsIfsDialogOpen(false);
-      resetIfsForm();
+      setIsDocumentDialogOpen(false);
+      resetDocumentForm();
     }
   };
 
-  const handleDeleteIfs = async () => {
-    if (!deleteIfsId) return;
-    setDeleteIfsLoading(true);
-    await deleteIFS(deleteIfsId);
-    setDeleteIfsLoading(false);
-    setIsDeleteIfsDialogOpen(false);
-    setDeleteIfsId(null);
+  const handleDeleteDocument = async () => {
+    if (!deleteDocumentId) return;
+    setDeleteDocumentLoading(true);
+    await deleteDocument(deleteDocumentId);
+    setDeleteDocumentLoading(false);
+    setIsDeleteDocumentDialogOpen(false);
+    setDeleteDocumentId(null);
   };
 
   // Form reset functions
@@ -361,35 +351,35 @@ const LivestockManagement = () => {
     setEditingLivestock(null);
   };
 
-  const resetIfsForm = () => {
-    setIfsFormData({
+  const resetDocumentForm = () => {
+    setDocumentFormData({
       livestock_id: "none",
       title: "",
       author: "",
       pdfFile: null,
     });
-    setEditingIfs(null);
+    setEditingDocument(null);
   };
 
   // Edit handlers
   const handleEditLivestock = (livestock: Livestock) => {
     setEditingLivestock(livestock);
     setLivestockFormData({
-      name: livestock.name,
+      name: livestock.name ?? "",
       image: null,
     });
     setIsLivestockDialogOpen(true);
   };
 
-  const handleEditIfs = (ifs: IFS) => {
-    setEditingIfs(ifs);
-    setIfsFormData({
-      livestock_id: ifs.livestock_id || "none",
-      title: ifs.title,
-      author: ifs.author,
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc);
+    setDocumentFormData({
+      livestock_id: doc.livestock_id || "none",
+      title: doc.title ?? "",
+      author: doc.author ?? "",
       pdfFile: null,
     });
-    setIsIfsDialogOpen(true);
+    setIsDocumentDialogOpen(true);
   };
 
   // Dialog close handlers
@@ -398,9 +388,9 @@ const LivestockManagement = () => {
     resetLivestockForm();
   };
 
-  const handleIfsDialogClose = () => {
-    setIsIfsDialogOpen(false);
-    resetIfsForm();
+  const handleDocumentDialogClose = () => {
+    setIsDocumentDialogOpen(false);
+    resetDocumentForm();
   };
 
   // Selection handlers
@@ -431,12 +421,12 @@ const LivestockManagement = () => {
     }
   };
 
-  const handleSortIfs = (column: string) => {
-    if (ifsSortBy === column) {
-      setIfsSortOrder(ifsSortOrder === "asc" ? "desc" : "asc");
+  const handleSortDocument = (column: string) => {
+    if (documentSortBy === column) {
+      setDocumentSortOrder(documentSortOrder === "asc" ? "desc" : "asc");
     } else {
-      setIfsSortBy(column);
-      setIfsSortOrder("asc");
+      setDocumentSortBy(column);
+      setDocumentSortOrder("asc");
     }
   };
 
@@ -446,9 +436,9 @@ const LivestockManagement = () => {
     setIsDeleteLivestockDialogOpen(true);
   };
 
-  const openDeleteIfsDialog = (id: string) => {
-    setDeleteIfsId(id);
-    setIsDeleteIfsDialogOpen(true);
+  const openDeleteDocumentDialog = (id: string) => {
+    setDeleteDocumentId(id);
+    setIsDeleteDocumentDialogOpen(true);
   };
 
   // Format date function
@@ -460,16 +450,6 @@ const LivestockManagement = () => {
     });
   };
 
-  console.log(
-    paginatedIFS.map((ifs) => ({
-      id: ifs.id,
-      livestock: ifs.livestocks,
-      title: ifs.title,
-      author: ifs.author,
-      created_at: ifs.created_at,
-    }))
-  );
-
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
       {/* Header */}
@@ -478,9 +458,7 @@ const LivestockManagement = () => {
           <h1 className="text-3xl font-bold text-gray-900">
             Livestock Management
           </h1>
-          <p className="text-gray-600 mt-2">
-            Manage livestock and integrated farming system documents
-          </p>
+          <p className="text-gray-600 mt-2">Manage livestock and documents</p>
         </div>
         <Button
           variant="outline"
@@ -535,7 +513,7 @@ const LivestockManagement = () => {
           </CardContent>
         </Card>
 
-        {/* IFS Documents Card */}
+        {/* Documents Card */}
         <Card className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-bl-full"></div>
           <CardHeader className="pb-3">
@@ -546,7 +524,7 @@ const LivestockManagement = () => {
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-violet-800 uppercase tracking-wide">
-                    IFS Documents
+                    Documents
                   </CardTitle>
                   <p className="text-xs text-violet-600/80 mt-0.5">
                     Knowledge base
@@ -558,15 +536,15 @@ const LivestockManagement = () => {
           <CardContent className="pt-0">
             <div className="space-y-3">
               <div className="text-3xl font-bold text-violet-900">
-                {getTotalIFSCount()}
+                {getTotalDocumentsCount()}
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-violet-700 font-medium">
                   {
                     [
                       ...new Set(
-                        ifsList
-                          .map((ifs) => ifs.livestock_id)
+                        documents
+                          .map((doc) => doc.livestock_id)
                           .filter((id) => id !== null)
                       ),
                     ].length
@@ -586,7 +564,7 @@ const LivestockManagement = () => {
       <Tabs defaultValue="livestock" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="livestock">Livestock</TabsTrigger>
-          <TabsTrigger value="ifs-documents">IFS Documents</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         {/* LIVESTOCK TAB */}
@@ -886,22 +864,22 @@ const LivestockManagement = () => {
           </div>
         </TabsContent>
 
-        {/* IFS DOCUMENTS TAB */}
-        <TabsContent value="ifs-documents" className="space-y-4">
+        {/* DOCUMENTS TAB */}
+        <TabsContent value="documents" className="space-y-4">
           <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-between w-full">
             <div className="flex flex-wrap gap-2 items-center min-w-0 w-full md:w-auto">
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search IFS documents..."
-                  value={ifsSearchTerm}
-                  onChange={(e) => setIfsSearchTerm(e.target.value)}
+                  placeholder="Search documents..."
+                  value={documentSearchTerm}
+                  onChange={(e) => setDocumentSearchTerm(e.target.value)}
                   className="pl-8 w-full sm:w-[250px]"
                 />
               </div>
               <Select
-                value={selectedIfsLivestock}
-                onValueChange={setSelectedIfsLivestock}
+                value={selectedDocumentLivestock}
+                onValueChange={setSelectedDocumentLivestock}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Filter by livestock" />
@@ -917,37 +895,41 @@ const LivestockManagement = () => {
               </Select>
             </div>
             <div className="flex gap-2 items-center">
-              <Dialog open={isIfsDialogOpen} onOpenChange={setIsIfsDialogOpen}>
+              <Dialog
+                open={isDocumentDialogOpen}
+                onOpenChange={setIsDocumentDialogOpen}
+              >
                 <DialogTrigger asChild>
-                  <Button onClick={() => setEditingIfs(null)}>
+                  <Button onClick={() => setEditingDocument(null)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add IFS Document
+                    Add Document
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingIfs
-                        ? "Edit IFS Document"
-                        : "Add New IFS Document"}
+                      {editingDocument ? "Edit Document" : "Add New Document"}
                     </DialogTitle>
                     <DialogDescription>
-                      {editingIfs
-                        ? "Update IFS document information"
-                        : "Create a new IFS document"}
+                      {editingDocument
+                        ? "Update document information"
+                        : "Create a new document"}
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleIfsSubmit}>
+                  <form onSubmit={handleDocumentSubmit}>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsLivestock" className="text-right">
+                        <Label
+                          htmlFor="documentLivestock"
+                          className="text-right"
+                        >
                           Livestock
                         </Label>
                         <Select
-                          value={ifsFormData.livestock_id}
+                          value={documentFormData.livestock_id}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               livestock_id: value,
                             })
                           }
@@ -969,15 +951,15 @@ const LivestockManagement = () => {
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsTitle" className="text-right">
+                        <Label htmlFor="documentTitle" className="text-right">
                           Title
                         </Label>
                         <Input
-                          id="ifsTitle"
-                          value={ifsFormData.title}
+                          id="documentTitle"
+                          value={documentFormData.title}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               title: e.target.value,
                             })
                           }
@@ -987,15 +969,15 @@ const LivestockManagement = () => {
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsAuthor" className="text-right">
+                        <Label htmlFor="documentAuthor" className="text-right">
                           Author
                         </Label>
                         <Input
-                          id="ifsAuthor"
-                          value={ifsFormData.author}
+                          id="documentAuthor"
+                          value={documentFormData.author}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               author: e.target.value,
                             })
                           }
@@ -1005,17 +987,17 @@ const LivestockManagement = () => {
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsPdf" className="text-right">
+                        <Label htmlFor="documentPdf" className="text-right">
                           PDF File
                         </Label>
                         <Input
-                          id="ifsPdf"
+                          id="documentPdf"
                           type="file"
                           accept="application/pdf"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               pdfFile: file || null,
                             });
                           }}
@@ -1027,7 +1009,7 @@ const LivestockManagement = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleIfsDialogClose}
+                        onClick={handleDocumentDialogClose}
                       >
                         Cancel
                       </Button>
@@ -1035,9 +1017,9 @@ const LivestockManagement = () => {
                         {isUploadingFile ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {editingIfs ? "Updating..." : "Creating..."}
+                            {editingDocument ? "Updating..." : "Creating..."}
                           </>
-                        ) : editingIfs ? (
+                        ) : editingDocument ? (
                           "Update"
                         ) : (
                           "Create"
@@ -1056,7 +1038,7 @@ const LivestockManagement = () => {
                 <TableRow>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("title")}
+                    onClick={() => handleSortDocument("title")}
                   >
                     <div className="flex items-center">
                       Title
@@ -1065,7 +1047,7 @@ const LivestockManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("author")}
+                    onClick={() => handleSortDocument("author")}
                   >
                     <div className="flex items-center">
                       Author
@@ -1075,7 +1057,7 @@ const LivestockManagement = () => {
                   <TableHead>PDF File</TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("livestock")}
+                    onClick={() => handleSortDocument("livestock")}
                   >
                     <div className="flex items-center">
                       Livestock
@@ -1084,7 +1066,7 @@ const LivestockManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("created_at")}
+                    onClick={() => handleSortDocument("created_at")}
                   >
                     <div className="flex items-center">
                       Created
@@ -1095,44 +1077,50 @@ const LivestockManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedIFS.length === 0 ? (
+                {paginatedDocuments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-sm">
-                      No IFS documents found.
+                      No documents found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedIFS.map((ifs) => (
-                    <TableRow key={ifs.id}>
-                      <TableCell className="font-medium">{ifs.title}</TableCell>
-                      <TableCell>{ifs.author}</TableCell>
+                  paginatedDocuments.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">{doc.title}</TableCell>
+                      <TableCell>{doc.author}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <FileText className="h-5 w-5 text-red-500 mr-2" />
-                          <a
-                            href={ifs.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                          >
-                            View PDF
-                          </a>
+                          {doc.file_urls && doc.file_urls.length > 0 ? (
+                            <a
+                              href={doc.file_urls[0]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              View PDF
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              No file
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {ifs.livestocks ? (
+                        {doc.livestocks ? (
                           <Badge
                             variant="secondary"
                             className="bg-green-600/10 text-green-600"
                           >
                             <Tag className="h-4 w-4 mr-1" />
-                            {ifs.livestocks?.name}
+                            {doc.livestocks?.name}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell>{formatDate(ifs.created_at)}</TableCell>
+                      <TableCell>{formatDate(doc.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1143,14 +1131,14 @@ const LivestockManagement = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => handleEditIfs(ifs)}
+                              onClick={() => handleEditDocument(doc)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => openDeleteIfsDialog(ifs.id)}
+                              onClick={() => openDeleteDocumentDialog(doc.id)}
                               className="text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -1166,21 +1154,21 @@ const LivestockManagement = () => {
             </Table>
           </div>
 
-          {/* IFS Pagination */}
+          {/* Document Pagination */}
           <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-between px-2 w-full">
             <div className="flex flex-wrap gap-2 items-center min-w-0 w-full md:w-auto">
               <div className="text-sm text-muted-foreground w-full sm:w-auto">
-                Showing {ifsStartIndex + 1}-
-                {Math.min(ifsEndIndex, filteredAndSortedIFS.length)} of{" "}
-                {filteredAndSortedIFS.length} documents
+                Showing {documentStartIndex + 1}-
+                {Math.min(documentEndIndex, filteredAndSortedDocuments.length)}{" "}
+                of {filteredAndSortedDocuments.length} documents
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground">Show:</span>
                 <Select
-                  value={ifsPageSize.toString()}
+                  value={documentPageSize.toString()}
                   onValueChange={(value) => {
-                    setIfsPageSize(Number(value));
-                    setIfsCurrentPage(1);
+                    setDocumentPageSize(Number(value));
+                    setDocumentCurrentPage(1);
                   }}
                 >
                   <SelectTrigger className="w-20">
@@ -1200,23 +1188,25 @@ const LivestockManagement = () => {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setIfsCurrentPage(Math.max(1, ifsCurrentPage - 1))
+                  setDocumentCurrentPage(Math.max(1, documentCurrentPage - 1))
                 }
-                disabled={ifsCurrentPage === 1}
+                disabled={documentCurrentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
               <span className="text-sm text-muted-foreground">
-                Page {ifsCurrentPage} of {ifsTotalPages}
+                Page {documentCurrentPage} of {documentTotalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setIfsCurrentPage(Math.min(ifsTotalPages, ifsCurrentPage + 1))
+                  setDocumentCurrentPage(
+                    Math.min(documentTotalPages, documentCurrentPage + 1)
+                  )
                 }
-                disabled={ifsCurrentPage === ifsTotalPages}
+                disabled={documentCurrentPage === documentTotalPages}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -1265,30 +1255,30 @@ const LivestockManagement = () => {
       </Dialog>
 
       <Dialog
-        open={isDeleteIfsDialogOpen}
-        onOpenChange={setIsDeleteIfsDialogOpen}
+        open={isDeleteDocumentDialogOpen}
+        onOpenChange={setIsDeleteDocumentDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this IFS document? This action
-              cannot be undone.
+              Are you sure you want to delete this document? This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsDeleteIfsDialogOpen(false)}
+              onClick={() => setIsDeleteDocumentDialogOpen(false)}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteIfs}
-              disabled={deleteIfsLoading}
+              onClick={handleDeleteDocument}
+              disabled={deleteDocumentLoading}
             >
-              {deleteIfsLoading ? (
+              {deleteDocumentLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...

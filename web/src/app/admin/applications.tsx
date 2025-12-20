@@ -45,21 +45,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getUserById } from "@/lib/utils";
-
-interface Application {
-  id: string;
-  title: string;
-  description: string;
-  author: string;
-  resource_url: string[];
-  filename: string;
-  size: number;
-  version: string;
-  platform: string;
-  is_active: boolean;
-  download_count: number;
-  uploaded_at: string;
-}
+import type { Application } from "@/lib/interface";
 
 function ApplicationManagement() {
   const { user, isLoading } = useAuth();

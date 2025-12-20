@@ -60,53 +60,13 @@ import {
   Tag,
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Type definitions based on provided interfaces
-interface MachineType {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-  _count?: {
-    machines: number;
-  };
-}
-
-interface Machine {
-  id: string;
-  name: string;
-  model_number: string;
-  image_url: string;
-  type_id: string;
-  created_at: string;
-  updated_at: string;
-  type: MachineType;
-}
-
-interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  machine_model_number?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  machine_type?: MachineType;
-  machines?: Machine;
-}
+import type { MachineType, Machine, Document } from "@/lib/interface";
 
 const MachinesManagement = () => {
   const {
     machineTypes,
     machines,
-    ifsList,
+    documents,
 
     isLoading,
     isUploadingFile,
@@ -121,13 +81,13 @@ const MachinesManagement = () => {
     deleteMachine,
     bulkDeleteMachines,
 
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    createDocument,
+    updateDocument,
+    deleteDocument,
 
     getTotalMachineTypes,
     getTotalMachines,
-    getTotalIFS,
+    getTotalDocumentsCount,
 
     refreshAll,
   } = useMachine();
@@ -164,14 +124,15 @@ const MachinesManagement = () => {
     "asc" | "desc"
   >("asc");
 
-  // IFS UI state
-  const [ifsSearchTerm, setIfsSearchTerm] = useState("");
-  const [selectedIfsMachineType, setSelectedIfsMachineType] =
+  // Document UI state
+  const [documentSearchTerm, setDocumentSearchTerm] = useState("");
+  const [selectedDocumentMachineType, setSelectedDocumentMachineType] =
     useState<string>("");
-  const [selectedIfsMachine, setSelectedIfsMachine] = useState<string>("");
-  const [isIfsDialogOpen, setIsIfsDialogOpen] = useState(false);
-  const [editingIfs, setEditingIfs] = useState<IFS | null>(null);
-  const [ifsFormData, setIfsFormData] = useState({
+  const [selectedDocumentMachine, setSelectedDocumentMachine] =
+    useState<string>("");
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [documentFormData, setDocumentFormData] = useState({
     machine_type_id: "",
     machine_id: "",
     title: "",
@@ -179,16 +140,18 @@ const MachinesManagement = () => {
     pdfFile: null as File | null,
     machine_model_number: "",
   });
-  const [ifsSortBy, setIfsSortBy] = useState<string>("");
-  const [ifsSortOrder, setIfsSortOrder] = useState<"asc" | "desc">("asc");
+  const [documentSortBy, setDocumentSortBy] = useState<string>("");
+  const [documentSortOrder, setDocumentSortOrder] = useState<"asc" | "desc">(
+    "asc"
+  );
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [machineTypeCurrentPage, setMachineTypeCurrentPage] = useState(1);
   const [machineTypePageSize, setMachineTypePageSize] = useState(10);
-  const [ifsCurrentPage, setIfsCurrentPage] = useState(1);
-  const [ifsPageSize, setIfsPageSize] = useState(10);
+  const [documentCurrentPage, setDocumentCurrentPage] = useState(1);
+  const [documentPageSize, setDocumentPageSize] = useState(10);
 
   // Delete confirmation dialog states
   const [deleteMachineId, setDeleteMachineId] = useState<string | null>(null);
@@ -199,12 +162,13 @@ const MachinesManagement = () => {
   );
   const [isDeleteMachineTypeDialogOpen, setIsDeleteMachineTypeDialogOpen] =
     useState(false);
-  const [deleteIfsId, setDeleteIfsId] = useState<string | null>(null);
-  const [isDeleteIfsDialogOpen, setIsDeleteIfsDialogOpen] = useState(false);
+  const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
+  const [isDeleteDocumentDialogOpen, setIsDeleteDocumentDialogOpen] =
+    useState(false);
   const [deleteMachineLoading, setDeleteMachineLoading] = useState(false);
   const [deleteMachineTypeLoading, setDeleteMachineTypeLoading] =
     useState(false);
-  const [deleteIfsLoading, setDeleteIfsLoading] = useState(false);
+  const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions for Machines
   const filteredAndSortedMachines = machines
@@ -276,53 +240,54 @@ const MachinesManagement = () => {
       }
     });
 
-  const filteredIFS = ifsList.filter((ifs) => {
-    const searchTerm = ifsSearchTerm.toLowerCase();
+  const filteredDocuments = documents.filter((doc) => {
+    const searchTerm = documentSearchTerm.toLowerCase();
     const matchesSearch =
-      ifs.machine_type?.name.toLowerCase().includes(searchTerm) ||
-      ifs.machines?.name.toLowerCase().includes(searchTerm);
+      doc.machine_type?.name.toLowerCase().includes(searchTerm) ||
+      doc.machines?.name.toLowerCase().includes(searchTerm) ||
+      doc.title.toLowerCase().includes(searchTerm);
 
     const matchesMachineType =
-      selectedIfsMachineType === "" ||
-      selectedIfsMachineType === "all" ||
-      ifs.machine_type_id === selectedIfsMachineType;
+      selectedDocumentMachineType === "" ||
+      selectedDocumentMachineType === "all" ||
+      doc.machine_type_id === selectedDocumentMachineType;
 
     const matchesMachine =
-      selectedIfsMachine === "" ||
-      selectedIfsMachine === "all" ||
-      ifs.machine_id === selectedIfsMachine;
+      selectedDocumentMachine === "" ||
+      selectedDocumentMachine === "all" ||
+      doc.machine_id === selectedDocumentMachine;
 
     return matchesSearch && matchesMachineType && matchesMachine;
   });
 
-  // Filter and sort functions for IFS
-  const filteredAndSortedIFS = filteredIFS.sort((a, b) => {
-    if (!ifsSortBy) return 0;
+  // Filter and sort functions for Documents
+  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
+    if (!documentSortBy) return 0;
 
     let aValue: any = a;
     let bValue: any = b;
 
-    if (ifsSortBy === "title") {
+    if (documentSortBy === "title") {
       aValue = a.title;
       bValue = b.title;
-    } else if (ifsSortBy === "author") {
+    } else if (documentSortBy === "author") {
       aValue = a.author;
       bValue = b.author;
-    } else if (ifsSortBy === "file_url") {
+    } else if (documentSortBy === "file_url") {
       aValue = a.file_url;
       bValue = b.file_url;
-    } else if (ifsSortBy === "machineType") {
+    } else if (documentSortBy === "machineType") {
       aValue = a.machine_type?.name || "";
       bValue = b.machine_type?.name || "";
-    } else if (ifsSortBy === "machine") {
+    } else if (documentSortBy === "machine") {
       aValue = a.machines?.name || "";
       bValue = b.machines?.name || "";
-    } else if (ifsSortBy === "created_at") {
+    } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);
     }
 
-    if (ifsSortOrder === "asc") {
+    if (documentSortOrder === "asc") {
       return aValue > bValue ? 1 : -1;
     } else {
       return aValue < bValue ? 1 : -1;
@@ -349,10 +314,15 @@ const MachinesManagement = () => {
     machineTypeEndIndex
   );
 
-  const ifsTotalPages = Math.ceil(filteredAndSortedIFS.length / ifsPageSize);
-  const ifsStartIndex = (ifsCurrentPage - 1) * ifsPageSize;
-  const ifsEndIndex = ifsStartIndex + ifsPageSize;
-  const paginatedIFS = filteredAndSortedIFS.slice(ifsStartIndex, ifsEndIndex);
+  const documentTotalPages = Math.ceil(
+    filteredAndSortedDocuments.length / documentPageSize
+  );
+  const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
+  const documentEndIndex = documentStartIndex + documentPageSize;
+  const paginatedDocuments = filteredAndSortedDocuments.slice(
+    documentStartIndex,
+    documentEndIndex
+  );
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -364,13 +334,13 @@ const MachinesManagement = () => {
   }, [machineTypeSearchTerm, machineTypeSortBy, machineTypeSortOrder]);
 
   useEffect(() => {
-    setIfsCurrentPage(1);
+    setDocumentCurrentPage(1);
   }, [
-    ifsSearchTerm,
-    selectedIfsMachineType,
-    selectedIfsMachine,
-    ifsSortBy,
-    ifsSortOrder,
+    documentSearchTerm,
+    selectedDocumentMachineType,
+    selectedDocumentMachine,
+    documentSortBy,
+    documentSortOrder,
   ]);
 
   // CRUD operations for Machines
@@ -447,48 +417,51 @@ const MachinesManagement = () => {
     setDeleteMachineTypeId(null);
   };
 
-  // CRUD operations for IFS
-  const handleIfsSubmit = async (e: React.FormEvent) => {
+  // CRUD operations for Documents
+  const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ifsFormData.pdfFile && !editingIfs) {
+    if (!documentFormData.pdfFile && !editingDocument) {
       toast.error("Please select a PDF file");
       return;
     }
 
     const formData = new FormData();
-    if (ifsFormData.machine_type_id) {
-      formData.append("machine_type_id", ifsFormData.machine_type_id);
+    if (documentFormData.machine_type_id) {
+      formData.append("machine_type_id", documentFormData.machine_type_id);
     }
-    if (ifsFormData.machine_id) {
-      formData.append("machine_id", ifsFormData.machine_id);
+    if (documentFormData.machine_id) {
+      formData.append("machine_id", documentFormData.machine_id);
     }
-    if (ifsFormData.machine_model_number) {
-      formData.append("machine_model_number", ifsFormData.machine_model_number);
+    if (documentFormData.machine_model_number) {
+      formData.append(
+        "machine_model_number",
+        documentFormData.machine_model_number
+      );
     }
-    formData.append("title", ifsFormData.title);
-    formData.append("author", ifsFormData.author);
-    if (ifsFormData.pdfFile) {
-      formData.append("file", ifsFormData.pdfFile);
+    formData.append("title", documentFormData.title);
+    formData.append("author", documentFormData.author);
+    if (documentFormData.pdfFile) {
+      formData.append("file_urls", documentFormData.pdfFile);
     }
 
-    const success = editingIfs
-      ? await updateIFS(editingIfs.id, formData)
-      : await createIFS(formData);
+    const success = editingDocument
+      ? await updateDocument(editingDocument.id, formData)
+      : await createDocument(formData);
 
     if (success) {
-      setIsIfsDialogOpen(false);
-      resetIfsForm();
+      setIsDocumentDialogOpen(false);
+      resetDocumentForm();
     }
   };
 
-  const handleDeleteIfs = async () => {
-    if (!deleteIfsId) return;
-    setDeleteIfsLoading(true);
-    await deleteIFS(deleteIfsId);
-    setDeleteIfsLoading(false);
-    setIsDeleteIfsDialogOpen(false);
-    setDeleteIfsId(null);
+  const handleDeleteDocument = async () => {
+    if (!deleteDocumentId) return;
+    setDeleteDocumentLoading(true);
+    await deleteDocument(deleteDocumentId);
+    setDeleteDocumentLoading(false);
+    setIsDeleteDocumentDialogOpen(false);
+    setDeleteDocumentId(null);
   };
 
   // Form reset functions
@@ -507,8 +480,8 @@ const MachinesManagement = () => {
     setEditingMachineType(null);
   };
 
-  const resetIfsForm = () => {
-    setIfsFormData({
+  const resetDocumentForm = () => {
+    setDocumentFormData({
       machine_type_id: "",
       machine_id: "",
       machine_model_number: "",
@@ -516,16 +489,16 @@ const MachinesManagement = () => {
       author: "",
       pdfFile: null,
     });
-    setEditingIfs(null);
+    setEditingDocument(null);
   };
 
   // Edit handlers
   const handleEditMachine = (machine: Machine) => {
     setEditingMachine(machine);
     setMachineFormData({
-      name: machine.name,
-      model_number: machine.model_number,
-      type_id: machine.type_id,
+      name: machine.name ?? "",
+      model_number: machine.model_number ?? "",
+      type_id: machine.type_id ?? "",
       image: null,
     });
     setIsMachineDialogOpen(true);
@@ -534,23 +507,23 @@ const MachinesManagement = () => {
   const handleEditMachineType = (machineType: MachineType) => {
     setEditingMachineType(machineType);
     setMachineTypeFormData({
-      name: machineType.name,
+      name: machineType.name ?? "",
       image: null,
     });
     setIsMachineTypeDialogOpen(true);
   };
 
-  const handleEditIfs = (ifs: IFS) => {
-    setEditingIfs(ifs);
-    setIfsFormData({
-      machine_type_id: ifs.machine_type_id || "",
-      machine_id: ifs.machine_id || "",
-      machine_model_number: ifs.machine_model_number || "",
-      title: ifs.title || "",
-      author: ifs.author || "",
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc);
+    setDocumentFormData({
+      machine_type_id: doc.machine_type_id || "",
+      machine_id: doc.machine_id || "",
+      machine_model_number: doc.machine_model_number || "",
+      title: doc.title || "",
+      author: doc.author || "",
       pdfFile: null,
     });
-    setIsIfsDialogOpen(true);
+    setIsDocumentDialogOpen(true);
   };
 
   // Dialog close handlers
@@ -564,9 +537,9 @@ const MachinesManagement = () => {
     resetMachineTypeForm();
   };
 
-  const handleIfsDialogClose = () => {
-    setIsIfsDialogOpen(false);
-    resetIfsForm();
+  const handleDocumentDialogClose = () => {
+    setIsDocumentDialogOpen(false);
+    resetDocumentForm();
   };
 
   // Delete dialog handlers
@@ -580,9 +553,9 @@ const MachinesManagement = () => {
     setIsDeleteMachineTypeDialogOpen(true);
   };
 
-  const openDeleteIfsDialog = (id: string) => {
-    setDeleteIfsId(id);
-    setIsDeleteIfsDialogOpen(true);
+  const openDeleteDocumentDialog = (id: string) => {
+    setDeleteDocumentId(id);
+    setIsDeleteDocumentDialogOpen(true);
   };
 
   // Selection handlers
@@ -638,12 +611,12 @@ const MachinesManagement = () => {
     }
   };
 
-  const handleSortIfs = (column: string) => {
-    if (ifsSortBy === column) {
-      setIfsSortOrder(ifsSortOrder === "asc" ? "desc" : "asc");
+  const handleSortDocument = (column: string) => {
+    if (documentSortBy === column) {
+      setDocumentSortOrder(documentSortOrder === "asc" ? "desc" : "asc");
     } else {
-      setIfsSortBy(column);
-      setIfsSortOrder("asc");
+      setDocumentSortBy(column);
+      setDocumentSortOrder("asc");
     }
   };
 
@@ -656,20 +629,18 @@ const MachinesManagement = () => {
     });
   };
 
-  // Clear IFS filters function
-  const clearIfsFilters = () => {
-    setIfsSearchTerm("");
-    setSelectedIfsMachineType("");
-    setSelectedIfsMachine("");
+  // Clear Document filters function
+  const clearDocumentFilters = () => {
+    setDocumentSearchTerm("");
+    setSelectedDocumentMachineType("");
+    setSelectedDocumentMachine("");
   };
 
-  // Handle IFS machine type change - reset machine filter when machine type changes
-  const handleIfsMachineTypeChange = (value: string) => {
-    setSelectedIfsMachineType(value);
-    setSelectedIfsMachine(""); // Reset machine selection when machine type changes
+  // Handle Document machine type change - reset machine filter when machine type changes
+  const handleDocumentMachineTypeChange = (value: string) => {
+    setSelectedDocumentMachineType(value);
+    setSelectedDocumentMachine(""); // Reset machine selection when machine type changes
   };
-
-  console.log("paginatedIFS : ", paginatedIFS);
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 px-4 md:px-6">
@@ -680,8 +651,7 @@ const MachinesManagement = () => {
             Machines Management
           </h1>
           <p className="text-gray-600 mt-2">
-            Manage machines, machine types, and integrated farming system
-            documents
+            Manage machines, machine types, and documents
           </p>
         </div>
         <Button
@@ -794,7 +764,7 @@ const MachinesManagement = () => {
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-violet-800 uppercase tracking-wide">
-                    IFS Documents
+                    Documents
                   </CardTitle>
                   <p className="text-xs text-violet-600/80 mt-0.5">
                     Knowledge base
@@ -806,15 +776,15 @@ const MachinesManagement = () => {
           <CardContent className="pt-0">
             <div className="space-y-3">
               <div className="text-3xl font-bold text-violet-900">
-                {getTotalIFS()}
+                {getTotalDocumentsCount()}
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-violet-700 font-medium">
                   {
                     [
                       ...new Set(
-                        ifsList
-                          .map((ifs) => ifs.machine_model_number)
+                        documents
+                          .map((doc) => doc.machine_model_number)
                           .filter((id) => id !== null)
                       ),
                     ].length
@@ -835,7 +805,7 @@ const MachinesManagement = () => {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="machine-types">Machine Types</TabsTrigger>
           <TabsTrigger value="machines">Machines</TabsTrigger>
-          <TabsTrigger value="ifs-documents">IFS Documents</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         {/* Machine Types Tab */}
@@ -1542,22 +1512,22 @@ const MachinesManagement = () => {
           </div>
         </TabsContent>
 
-        {/* IFS Documents Tab */}
-        <TabsContent value="ifs-documents" className="space-y-4">
+        {/* Documents Tab */}
+        <TabsContent value="documents" className="space-y-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto md:items-center">
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search IFS documents..."
-                  value={ifsSearchTerm}
-                  onChange={(e) => setIfsSearchTerm(e.target.value)}
+                  placeholder="Search documents..."
+                  value={documentSearchTerm}
+                  onChange={(e) => setDocumentSearchTerm(e.target.value)}
                   className="pl-8 w-full sm:w-[220px] md:w-[300px]"
                 />
               </div>
               <Select
-                value={selectedIfsMachineType}
-                onValueChange={handleIfsMachineTypeChange}
+                value={selectedDocumentMachineType}
+                onValueChange={handleDocumentMachineTypeChange}
               >
                 <SelectTrigger className="w-full sm:w-[180px] md:w-[200px]">
                   <SelectValue placeholder="Filter by Machine Type" />
@@ -1572,8 +1542,8 @@ const MachinesManagement = () => {
                 </SelectContent>
               </Select>
               <Select
-                value={selectedIfsMachine}
-                onValueChange={setSelectedIfsMachine}
+                value={selectedDocumentMachine}
+                onValueChange={setSelectedDocumentMachine}
               >
                 <SelectTrigger className="w-full sm:w-[180px] md:w-[200px]">
                   <SelectValue placeholder="Filter by Machine" />
@@ -1585,9 +1555,9 @@ const MachinesManagement = () => {
                       machines
                         .filter(
                           (machine) =>
-                            selectedIfsMachineType === "" ||
-                            selectedIfsMachineType === "all" ||
-                            machine.type_id === selectedIfsMachineType
+                            selectedDocumentMachineType === "" ||
+                            selectedDocumentMachineType === "all" ||
+                            machine.type_id === selectedDocumentMachineType
                         )
                         .map((machine) => [machine.name, machine])
                     ).values()
@@ -1598,13 +1568,13 @@ const MachinesManagement = () => {
                   ))}
                 </SelectContent>
               </Select>
-              {(ifsSearchTerm ||
-                selectedIfsMachineType ||
-                selectedIfsMachine) && (
+              {(documentSearchTerm ||
+                selectedDocumentMachineType ||
+                selectedDocumentMachine) && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={clearIfsFilters}
+                  onClick={clearDocumentFilters}
                   className="px-3 w-full sm:w-auto"
                 >
                   Clear Filters
@@ -1612,40 +1582,44 @@ const MachinesManagement = () => {
               )}
             </div>
             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-              <Dialog open={isIfsDialogOpen} onOpenChange={setIsIfsDialogOpen}>
+              <Dialog
+                open={isDocumentDialogOpen}
+                onOpenChange={setIsDocumentDialogOpen}
+              >
                 <DialogTrigger asChild>
                   <Button
-                    onClick={() => setEditingIfs(null)}
+                    onClick={() => setEditingDocument(null)}
                     className="w-full sm:w-auto"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add IFS Document
+                    Add Document
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingIfs
-                        ? "Edit IFS Document"
-                        : "Add New IFS Document"}
+                      {editingDocument ? "Edit Document" : "Add New Document"}
                     </DialogTitle>
                     <DialogDescription>
-                      {editingIfs
-                        ? "Update IFS document information"
-                        : "Upload a new IFS document"}
+                      {editingDocument
+                        ? "Update document information"
+                        : "Upload a new document"}
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleIfsSubmit}>
+                  <form onSubmit={handleDocumentSubmit}>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsMachineType" className="text-right">
+                        <Label
+                          htmlFor="documentMachineType"
+                          className="text-right"
+                        >
                           Machine Type
                         </Label>
                         <Select
-                          value={ifsFormData.machine_type_id}
+                          value={documentFormData.machine_type_id}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               machine_type_id: value,
                               machine_id: "none", // Reset machine selection when machine type changes
                             })
@@ -1665,14 +1639,14 @@ const MachinesManagement = () => {
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsMachine" className="text-right">
+                        <Label htmlFor="documentMachine" className="text-right">
                           Machine
                         </Label>
                         <Select
-                          value={ifsFormData.machine_id}
+                          value={documentFormData.machine_id}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               machine_id: value,
                             })
                           }
@@ -1687,10 +1661,11 @@ const MachinesManagement = () => {
                                 machines
                                   .filter(
                                     (machine) =>
-                                      ifsFormData.machine_type_id === "none" ||
-                                      !ifsFormData.machine_type_id ||
+                                      documentFormData.machine_type_id ===
+                                        "none" ||
+                                      !documentFormData.machine_type_id ||
                                       machine.type_id ===
-                                        ifsFormData.machine_type_id
+                                        documentFormData.machine_type_id
                                   )
                                   .map((machine) => [machine.name, machine]) // Use name as key
                               ).values()
@@ -1703,14 +1678,17 @@ const MachinesManagement = () => {
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsMachineModel" className="text-right">
+                        <Label
+                          htmlFor="documentMachineModel"
+                          className="text-right"
+                        >
                           Model Number
                         </Label>
                         <Select
-                          value={ifsFormData.machine_model_number}
+                          value={documentFormData.machine_model_number}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               machine_model_number: value,
                             })
                           }
@@ -1723,7 +1701,7 @@ const MachinesManagement = () => {
                             {(() => {
                               // Find the name of the selected machine
                               const selectedMachineName = machines.find(
-                                (m) => m.id === ifsFormData.machine_id
+                                (m) => m.id === documentFormData.machine_id
                               )?.name;
 
                               // Filter machines by the selected name
@@ -1754,60 +1732,60 @@ const MachinesManagement = () => {
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsTitle" className="text-right">
+                        <Label htmlFor="documentTitle" className="text-right">
                           Title
                         </Label>
                         <Input
-                          id="ifsTitle"
-                          value={ifsFormData.title}
+                          id="documentTitle"
+                          value={documentFormData.title}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               title: e.target.value,
                             })
                           }
                           className="col-span-3"
                           placeholder="Enter document title"
-                          required={!editingIfs}
+                          required={!editingDocument}
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsAuthor" className="text-right">
+                        <Label htmlFor="documentAuthor" className="text-right">
                           Author
                         </Label>
                         <Input
-                          id="ifsAuthor"
-                          value={ifsFormData.author}
+                          id="documentAuthor"
+                          value={documentFormData.author}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               author: e.target.value,
                             })
                           }
                           className="col-span-3"
                           placeholder="Enter document author"
-                          required={!editingIfs}
+                          required={!editingDocument}
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="ifsPdf" className="text-right">
+                        <Label htmlFor="documentPdf" className="text-right">
                           PDF File
                         </Label>
                         <Input
-                          id="ifsPdf"
+                          id="documentPdf"
                           type="file"
                           accept="application/pdf"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               pdfFile: file || null,
                             });
                           }}
                           className="col-span-3"
-                          required={!editingIfs}
+                          required={!editingDocument}
                         />
-                        {editingIfs && (
+                        {editingDocument && (
                           <p className="col-span-4 text-xs text-muted-foreground text-center">
                             Leave empty to keep the current PDF file
                           </p>
@@ -1818,7 +1796,7 @@ const MachinesManagement = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleIfsDialogClose}
+                        onClick={handleDocumentDialogClose}
                       >
                         Cancel
                       </Button>
@@ -1826,9 +1804,9 @@ const MachinesManagement = () => {
                         {isUploadingFile ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {editingIfs ? "Updating..." : "Uploading..."}
+                            {editingDocument ? "Updating..." : "Uploading..."}
                           </>
-                        ) : editingIfs ? (
+                        ) : editingDocument ? (
                           "Update"
                         ) : (
                           "Upload"
@@ -1847,7 +1825,7 @@ const MachinesManagement = () => {
                 <TableRow>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("title")}
+                    onClick={() => handleSortDocument("title")}
                   >
                     <div className="flex items-center">
                       Title
@@ -1856,7 +1834,7 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("author")}
+                    onClick={() => handleSortDocument("author")}
                   >
                     <div className="flex items-center">
                       Author
@@ -1865,7 +1843,7 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("file_url")}
+                    onClick={() => handleSortDocument("file_url")}
                   >
                     <div className="flex items-center">
                       PDF File
@@ -1874,7 +1852,7 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("machineType")}
+                    onClick={() => handleSortDocument("machineType")}
                   >
                     <div className="flex items-center">
                       Machine Type
@@ -1883,7 +1861,7 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("machine")}
+                    onClick={() => handleSortDocument("machine")}
                   >
                     <div className="flex items-center">
                       Machine
@@ -1892,7 +1870,7 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("machine")}
+                    onClick={() => handleSortDocument("machine")}
                   >
                     <div className="flex items-center">
                       Model Number
@@ -1901,7 +1879,7 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("created_at")}
+                    onClick={() => handleSortDocument("created_at")}
                   >
                     <div className="flex items-center">
                       Upload Date
@@ -1912,30 +1890,30 @@ const MachinesManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedIFS.length === 0 ? (
+                {paginatedDocuments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center text-sm">
-                      No IFS Document found.
+                      No Document found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedIFS.map((ifs) => (
-                    <TableRow key={ifs.id}>
+                  paginatedDocuments.map((doc) => (
+                    <TableRow key={doc.id}>
                       <TableCell>
                         <div className="flex items-center">
-                          <span className="font-medium">{ifs.title}</span>
+                          <span className="font-medium">{doc.title}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
-                          {ifs.author || "Unknown"}
+                          {doc.author || "Unknown"}
                         </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <FileText className="h-4 w-4 mr-2 text-red-600" />
                           <a
-                            href={ifs.file_url}
+                            href={doc.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
@@ -1945,27 +1923,27 @@ const MachinesManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {ifs.machine_type ? (
+                        {doc.machine_type ? (
                           <Badge
                             variant="secondary"
                             className="bg-green-600/10 text-green-600"
                           >
                             <Tag className="h-4 w-4 mr-1" />
-                            {ifs.machine_type.name}
+                            {doc.machine_type.name}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {ifs.machines?.name ? (
+                        {doc.machines?.name ? (
                           <div className="flex justify-start items-center gap-2">
                             <Badge
                               variant="secondary"
                               className="bg-green-600/10 text-green-600"
                             >
                               <Tag className="h-4 w-4 mr-1" />
-                              {ifs.machines.name}
+                              {doc.machines.name}
                             </Badge>
                           </div>
                         ) : (
@@ -1973,17 +1951,17 @@ const MachinesManagement = () => {
                         )}
                       </TableCell>
                       <TableCell>
-                        {ifs.machine_model_number ? (
+                        {doc.machine_model_number ? (
                           <div className="flex justify-start items-center gap-2">
                             <Badge variant="outline">
-                              {ifs.machine_model_number}
+                              {doc.machine_model_number}
                             </Badge>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell>{formatDate(ifs.created_at)}</TableCell>
+                      <TableCell>{formatDate(doc.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1994,14 +1972,14 @@ const MachinesManagement = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => handleEditIfs(ifs)}
+                              onClick={() => handleEditDocument(doc)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => openDeleteIfsDialog(ifs.id)}
+                              onClick={() => openDeleteDocumentDialog(doc.id)}
                               className="text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -2017,21 +1995,21 @@ const MachinesManagement = () => {
             </Table>
           </div>
 
-          {/* IFS Pagination */}
+          {/* Document Pagination */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 px-2">
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto md:items-center">
               <div className="text-sm text-muted-foreground">
-                Showing {ifsStartIndex + 1}-
-                {Math.min(ifsEndIndex, filteredAndSortedIFS.length)} of{" "}
-                {filteredAndSortedIFS.length} IFS documents
+                Showing {documentStartIndex + 1}-
+                {Math.min(documentEndIndex, filteredAndSortedDocuments.length)}{" "}
+                of {filteredAndSortedDocuments.length} documents
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Show:</span>
                 <Select
-                  value={String(ifsPageSize)}
+                  value={String(documentPageSize)}
                   onValueChange={(v) => {
-                    setIfsPageSize(Number(v));
-                    setIfsCurrentPage(1);
+                    setDocumentPageSize(Number(v));
+                    setDocumentCurrentPage(1);
                   }}
                 >
                   <SelectTrigger className="w-[70px]">
@@ -2050,20 +2028,20 @@ const MachinesManagement = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIfsCurrentPage(ifsCurrentPage - 1)}
-                disabled={ifsCurrentPage === 1}
+                onClick={() => setDocumentCurrentPage(documentCurrentPage - 1)}
+                disabled={documentCurrentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
               <div className="text-sm font-medium">
-                Page {ifsCurrentPage} of {ifsTotalPages}
+                Page {documentCurrentPage} of {documentTotalPages}
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIfsCurrentPage(ifsCurrentPage + 1)}
-                disabled={ifsCurrentPage === ifsTotalPages}
+                onClick={() => setDocumentCurrentPage(documentCurrentPage + 1)}
+                disabled={documentCurrentPage === documentTotalPages}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -2151,31 +2129,31 @@ const MachinesManagement = () => {
       </Dialog>
 
       <Dialog
-        open={isDeleteIfsDialogOpen}
-        onOpenChange={setIsDeleteIfsDialogOpen}
+        open={isDeleteDocumentDialogOpen}
+        onOpenChange={setIsDeleteDocumentDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete IFS Document</DialogTitle>
+            <DialogTitle>Delete Document</DialogTitle>
           </DialogHeader>
           <div className="py-2">
-            Are you sure you want to delete this IFS entry? This action cannot
-            be undone.
+            Are you sure you want to delete this document? This action cannot be
+            undone.
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsDeleteIfsDialogOpen(false)}
-              disabled={deleteIfsLoading}
+              onClick={() => setIsDeleteDocumentDialogOpen(false)}
+              disabled={deleteDocumentLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteIfs}
-              disabled={deleteIfsLoading}
+              onClick={handleDeleteDocument}
+              disabled={deleteDocumentLoading}
             >
-              {deleteIfsLoading ? (
+              {deleteDocumentLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
@@ -2195,12 +2173,10 @@ const AdminMachinePage = () => {
   return (
     <MachineProvider>
       <SidebarProvider
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
+        style={{
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        }}
       >
         <AppSidebar variant="inset" />
         <SidebarInset>

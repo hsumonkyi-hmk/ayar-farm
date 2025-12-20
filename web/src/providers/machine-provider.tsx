@@ -1,52 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
-export interface MachineType {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-  _count: {
-    machines: number;
-  };
-}
-
-export interface Machine {
-  id: string;
-  name: string;
-  model_number: string;
-  image_url: string;
-  type_id: string;
-  created_at: string;
-  updated_at: string;
-  type: MachineType;
-}
-
-export interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  machine_model_number?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  machine_type?: MachineType;
-  machines?: Machine;
-}
+import { MachineType, Machine, Document } from "@/lib/interface";
+export type { MachineType, Machine, Document };
 
 interface MachineContextType {
   // Data
   machineTypes: MachineType[];
   machines: Machine[];
-  ifsList: IFS[];
+  documents: Document[];
 
   // Loading state
   isLoading: boolean;
@@ -56,7 +20,7 @@ interface MachineContextType {
   // Fetch functions
   fetchMachineTypes: () => Promise<MachineType[]>;
   fetchMachines: () => Promise<Machine[]>;
-  fetchIFS: () => Promise<IFS[]>;
+  fetchDocuments: () => Promise<Document[]>;
   refreshAll: () => Promise<void>;
 
   // CRUD operations for Machine Types
@@ -71,19 +35,19 @@ interface MachineContextType {
   deleteMachine: (id: string) => Promise<boolean>;
   bulkDeleteMachines: (ids: string[]) => Promise<boolean>;
 
-  // CRUD operations for IFS
-  createIFS: (data: FormData) => Promise<boolean>;
-  updateIFS: (id: string, data: FormData) => Promise<boolean>;
-  deleteIFS: (id: string) => Promise<boolean>;
+  // CRUD operations for Documents
+  createDocument: (data: FormData) => Promise<boolean>;
+  updateDocument: (id: string, data: FormData) => Promise<boolean>;
+  deleteDocument: (id: string) => Promise<boolean>;
 
   // Utility functions
   getMachineTypeById: (id: string) => MachineType | undefined;
   getMachineById: (id: string) => Machine | undefined;
-  getIFSById: (id: string) => IFS | undefined;
+  getDocumentById: (id: string) => Document | undefined;
   getMachinesByType: (typeId: string) => Machine[];
   getTotalMachineTypes: () => number;
   getTotalMachines: () => number;
-  getTotalIFS: () => number;
+  getTotalDocumentsCount: () => number;
 }
 
 const MachineContext = createContext<MachineContextType | undefined>(undefined);
@@ -92,14 +56,12 @@ interface MachineProviderProps {
   children: ReactNode;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 export const MachineProvider: React.FC<MachineProviderProps> = ({
   children,
 }) => {
   const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [ifsList, setIfsList] = useState<IFS[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,22 +69,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const fetchMachineTypes = async (): Promise<MachineType[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/machine/machine-types`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get("/machine/machine-types");
+      const data = response.data;
 
       if (data && typeof data === "object") {
         const fetchedMachineTypes = data.machineTypes || [];
         setMachineTypes(fetchedMachineTypes);
-
-        if (!data.machineTypes && !data.error) {
-          console.warn("Received empty response for machine types");
-        }
-
         return fetchedMachineTypes;
       } else {
         throw new Error("Invalid response format for machine types");
@@ -141,22 +93,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const fetchMachines = async (): Promise<Machine[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/machine/machines`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get("/machine/machines");
+      const data = response.data;
 
       if (data && typeof data === "object") {
         const fetchedMachines = data.machines || [];
         setMachines(fetchedMachines);
-
-        if (!data.machines && !data.error) {
-          console.warn("Received empty response for machines");
-        }
-
         return fetchedMachines;
       } else {
         throw new Error("Invalid response format for machines");
@@ -165,41 +107,31 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "An unknown error occurred while fetching crops";
+          : "An unknown error occurred while fetching machines";
       setError(errorMessage);
-      console.error("Error fetching crops:", errorMessage);
+      console.error("Error fetching machines:", errorMessage);
       throw error;
     }
   };
 
-  const fetchIFS = async (): Promise<IFS[]> => {
+  const fetchDocuments = async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/ifs/`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const response = await api.get("/document/documents");
+      const data = response.data;
 
       if (data && typeof data === "object") {
-        const fetchedIFS = data.ifsList || [];
-        setIfsList(fetchedIFS);
-
-        if (!data.ifsList && !data.error) {
-          console.warn("Received empty response for IFS");
-        }
-
-        return fetchedIFS;
+        const fetchedDocuments = data.documents || [];
+        setDocuments(fetchedDocuments);
+        return fetchedDocuments;
       } else {
         throw new Error("Invalid response format");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to fetch IFS data";
+        err instanceof Error ? err.message : "Failed to fetch documents";
       setError(errorMessage);
-      console.error("Fetch IFS error:", err);
+      console.error("Fetch documents error:", err);
       throw err;
     }
   };
@@ -210,26 +142,14 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       const results = await Promise.allSettled([
         fetchMachineTypes(),
         fetchMachines(),
-        fetchIFS(),
+        fetchDocuments(),
       ]);
 
       const failures = results.filter((result) => result.status === "rejected");
-
       const success = results.filter((result) => result.status === "fulfilled");
 
-      let totalDataCount = 0;
-      success.forEach((result) => {
-        if (result.value && Array.isArray(result.value)) {
-          totalDataCount += result.value.length;
-        }
-      });
-
       if (failures.length === 0) {
-        if (totalDataCount > 0) {
-          toast.success("Data Fetched successfully");
-        } else {
-          toast.info("Data Fetched - no records found");
-        }
+        toast.success("Data Fetched successfully");
       } else if (failures.length === results.length) {
         toast.error("Failed to fetch data - server or database may be offline");
       } else {
@@ -248,16 +168,11 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const createMachineType = async (data: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/machine/machine-types`, {
-        method: "POST",
-        body: data,
+      const response = await api.post("/machine/machine-types", data, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       if (result && result.machineType) {
         setMachineTypes((prev) => [...prev, result.machineType]);
         toast.success("Machine type created successfully");
@@ -285,19 +200,11 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(
-        `${API_BASE_URL}/machine/machine-types/${id}`,
-        {
-          method: "PUT",
-          body: data,
-        }
-      );
+      const response = await api.put(`/machine/machine-types/${id}`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       if (result && result.machineType) {
         setMachineTypes((prev) =>
           prev.map((type) => (type.id === id ? result.machineType : type))
@@ -323,17 +230,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
 
   const deleteMachineType = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/machine/machine-types/${id}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
+      await api.delete(`/machine/machine-types/${id}`);
       setMachineTypes((prev) => prev.filter((type) => type.id !== id));
       toast.success("Machine type deleted successfully");
       return true;
@@ -355,17 +252,9 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
         throw new Error("Invalid request: IDs array is required");
       }
 
-      const response = await fetch(`${API_BASE_URL}/machine/machine-types`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
+      await api.delete("/machine/machine-types", {
+        data: { ids },
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
 
       setMachineTypes((prev) => prev.filter((type) => !ids.includes(type.id)));
       toast.success(`${ids.length} machine types deleted successfully`);
@@ -385,16 +274,11 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const createMachine = async (data: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/machine/machines`, {
-        method: "POST",
-        body: data,
+      const response = await api.post("/machine/machines", data, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       if (result && result.machine) {
         setMachines((prev) => [...prev, result.machine]);
         toast.success("Machine created successfully");
@@ -420,16 +304,11 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/machine/machines/${id}`, {
-        method: "PUT",
-        body: data,
+      const response = await api.put(`/machine/machines/${id}`, data, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       if (result && result.machine) {
         setMachines((prev) =>
           prev.map((machine) => (machine.id === id ? result.machine : machine))
@@ -453,14 +332,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
 
   const deleteMachine = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/machine/machines/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
+      await api.delete(`/machine/machines/${id}`);
       setMachines((prev) => prev.filter((machine) => machine.id !== id));
       toast.success("Machine deleted successfully");
       return true;
@@ -480,22 +352,13 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
         throw new Error("Invalid request: IDs array is required");
       }
 
-      const response = await fetch(`${API_BASE_URL}/machine/machines/`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
+      await api.delete("/machine/machines", {
+        data: { ids },
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        toast.success(`${ids.length} machines deleted successfully`);
-        await fetchMachines();
-        return true;
-      } else {
-        throw new Error(data.error || "Failed to delete machines");
-      }
+      toast.success(`${ids.length} machines deleted successfully`);
+      await fetchMachines();
+      return true;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to delete machines";
@@ -505,25 +368,26 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
     }
   };
 
-  const createIFS = async (formData: FormData): Promise<boolean> => {
+  const createDocument = async (formData: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/ifs/`, {
-        method: "POST",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "/document/documents",
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("IFS document uploaded successfully");
-        await fetchIFS();
+      if (response && !response.error) {
+        toast.success("Document uploaded successfully");
+        await fetchDocuments();
         return true;
       } else {
-        throw new Error(data.error || "Failed to upload IFS document");
+        throw new Error("Failed to upload document");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to upload IFS document";
+        err instanceof Error ? err.message : "Failed to upload document";
       toast.error(errorMessage);
       return false;
     } finally {
@@ -531,28 +395,29 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
     }
   };
 
-  const updateIFS = async (
+  const updateDocument = async (
     id: string,
     formData: FormData
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "PUT",
-        body: formData,
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.put(
+        `/document/documents/${id}`,
+        formData,
+        token || undefined
+      );
 
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("IFS document updated successfully");
-        await fetchIFS();
+      if (response && !response.error) {
+        toast.success("Document updated successfully");
+        await fetchDocuments();
         return true;
       } else {
-        throw new Error(data.error || "Failed to update IFS document");
+        throw new Error("Failed to update document");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to update IFS document";
+        err instanceof Error ? err.message : "Failed to update document";
       toast.error(errorMessage);
       return false;
     } finally {
@@ -560,22 +425,23 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
     }
   };
 
-  const deleteIFS = async (id: string): Promise<boolean> => {
+  const deleteDocument = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (response.ok) {
-        toast.success("IFS document deleted successfully");
-        await fetchIFS();
+      const token = localStorage.getItem("token");
+      const response = await api.delete(
+        `/document/documents/${id}`,
+        token || undefined
+      );
+      if (response && !response.error) {
+        toast.success("Document deleted successfully");
+        await fetchDocuments();
         return true;
       } else {
-        throw new Error(data.error || "Failed to delete IFS document");
+        throw new Error("Failed to delete document");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to delete IFS document";
+        err instanceof Error ? err.message : "Failed to delete document";
       toast.error(errorMessage);
       return false;
     }
@@ -589,12 +455,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
     return machines.find((machine) => machine.id === id);
   };
 
-  const getIFSById = (id: string): IFS | undefined => {
-    return ifsList.find((ifs) => ifs.id === id);
+  const getDocumentById = (id: string): Document | undefined => {
+    return documents.find((doc) => doc.id === id);
   };
 
   const getMachinesByType = (typeId: string): Machine[] => {
-    return machines.filter((machine) => machine.type_id === typeId);
+    return machines.filter((machine) => machine.machine_type_id === typeId);
   };
 
   const getTotalMachineTypes = (): number => {
@@ -604,11 +470,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const getTotalMachines = (): number => {
     return machines.length;
   };
-  ``;
 
-  const getTotalIFS = (): number => {
-    const machineIfs = ifsList.filter((ifs) => ifs.machine_id);
-    return machineIfs.length;
+  const getTotalDocumentsCount = (): number => {
+    const machineDocuments = documents.filter(
+      (doc) => doc.machine_id || doc.machine_type_id
+    );
+    return machineDocuments.length;
   };
 
   useEffect(() => {
@@ -618,7 +485,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const value: MachineContextType = {
     machineTypes,
     machines,
-    ifsList,
+    documents,
 
     isLoading,
     isUploadingFile,
@@ -626,7 +493,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
 
     fetchMachineTypes,
     fetchMachines,
-    fetchIFS,
+    fetchDocuments,
     refreshAll,
 
     createMachineType,
@@ -639,17 +506,17 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
     deleteMachine,
     bulkDeleteMachines,
 
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    createDocument,
+    updateDocument,
+    deleteDocument,
 
     getMachineTypeById,
     getMachineById,
-    getIFSById,
+    getDocumentById,
     getMachinesByType,
     getTotalMachineTypes,
     getTotalMachines,
-    getTotalIFS,
+    getTotalDocumentsCount,
   };
 
   return (

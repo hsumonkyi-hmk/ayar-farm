@@ -58,47 +58,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-// Type definitions based on the fishery provider
-interface Fishery {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  fisheries?: Fishery;
-}
+import type { Fishery, Document } from "@/lib/interface";
 
 const FisheriesManagement = () => {
   const {
     fisheries,
-    ifsList,
+    documents,
     isLoading,
     isUploadingFile,
     createFishery,
     updateFishery,
     deleteFishery,
     bulkDeleteFisheries: bulkDeleteFishery,
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    createDocument,
+    updateDocument,
+    deleteDocument,
     getTotalFisheriesCount: getTotalFisheryCount,
-    getTotalIFSCount,
+    getTotalDocumentsCount,
     refreshAll,
   } = useFishery();
 
@@ -112,14 +88,14 @@ const FisheriesManagement = () => {
   });
   const [selectedFishery, setSelectedFishery] = useState<string[]>([]);
 
-  // IFS UI state
-  const [ifsSearchTerm, setIfsSearchTerm] = useState("");
-  const [selectedIfsFishery, setSelectedIfsFishery] =
+  // Document UI state
+  const [documentSearchTerm, setDocumentSearchTerm] = useState("");
+  const [selectedDocumentFishery, setSelectedDocumentFishery] =
     useState<string>("all_fisheries");
-  const [isIfsDialogOpen, setIsIfsDialogOpen] = useState(false);
-  const [editingIfs, setEditingIfs] = useState<IFS | null>(null);
-  const [ifsFormData, setIfsFormData] = useState({
-    fishery_id: "none",
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
+  const [documentFormData, setDocumentFormData] = useState({
+    fish_id: "none",
     title: "",
     author: "",
     pdfFile: null as File | null,
@@ -133,20 +109,23 @@ const FisheriesManagement = () => {
     "asc"
   );
 
-  // IFS pagination and sorting state
-  const [ifsCurrentPage, setIfsCurrentPage] = useState(1);
-  const [ifsPageSize, setIfsPageSize] = useState(10);
-  const [ifsSortBy, setIfsSortBy] = useState<string>("");
-  const [ifsSortOrder, setIfsSortOrder] = useState<"asc" | "desc">("asc");
+  // Document pagination and sorting state
+  const [documentCurrentPage, setDocumentCurrentPage] = useState(1);
+  const [documentPageSize, setDocumentPageSize] = useState(10);
+  const [documentSortBy, setDocumentSortBy] = useState<string>("");
+  const [documentSortOrder, setDocumentSortOrder] = useState<"asc" | "desc">(
+    "asc"
+  );
 
   // Delete confirmation dialog states
   const [deleteFisheryId, setDeleteFisheryId] = useState<string | null>(null);
   const [isDeleteFisheryDialogOpen, setIsDeleteFisheryDialogOpen] =
     useState(false);
-  const [deleteIfsId, setDeleteIfsId] = useState<string | null>(null);
-  const [isDeleteIfsDialogOpen, setIsDeleteIfsDialogOpen] = useState(false);
+  const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
+  const [isDeleteDocumentDialogOpen, setIsDeleteDocumentDialogOpen] =
+    useState(false);
   const [deleteFisheryLoading, setDeleteFisheryLoading] = useState(false);
-  const [deleteIfsLoading, setDeleteIfsLoading] = useState(false);
+  const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions for Fishery
   const filteredFishery = fisheries.filter((fishery) =>
@@ -189,64 +168,67 @@ const FisheriesManagement = () => {
     fisheryEndIndex
   );
 
-  const ifsListWithFishery = ifsList.map((ifs) => ({
-    ...ifs,
-    fisheries: ifs.fisheries || fisheries.find((l) => l.id === ifs.fishery_id),
+  const documentsWithFishery = documents.map((doc) => ({
+    ...doc,
+    fish: doc.fish || fisheries.find((l) => l.id === doc.fish_id),
   }));
 
-  // Filter and sort functions for IFS (only show those with fishery_id)
-  const filteredIFS = ifsListWithFishery
-    .filter((ifs) => ifs.fishery_id != null)
-    .filter((ifs) => {
-      const searchTerm = ifsSearchTerm.toLowerCase();
+  // Filter and sort functions for Document (only show those with fish_id)
+  const filteredDocuments = documentsWithFishery
+    .filter((doc) => doc.fish_id != null)
+    .filter((doc) => {
+      const searchTerm = documentSearchTerm.toLowerCase();
       const matchesSearch =
-        ifs.fisheries?.name?.toLowerCase().includes(searchTerm) ||
-        ifs.title?.toLowerCase().includes(searchTerm) ||
-        ifs.author?.toLowerCase().includes(searchTerm);
+        doc.fish?.name?.toLowerCase().includes(searchTerm) ||
+        doc.title?.toLowerCase().includes(searchTerm) ||
+        doc.author?.toLowerCase().includes(searchTerm);
 
       const matchesFishery =
-        selectedIfsFishery === "" ||
-        selectedIfsFishery === "all_fisheries" ||
-        ifs.fishery_id === selectedIfsFishery;
+        selectedDocumentFishery === "" ||
+        selectedDocumentFishery === "all_fisheries" ||
+        doc.fish_id === selectedDocumentFishery;
 
       return matchesSearch && matchesFishery;
     });
 
-  const filteredAndSortedIFS = filteredIFS.sort((a, b) => {
-    if (!ifsSortBy) return 0;
+  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
+    if (!documentSortBy) return 0;
 
     let aValue: any = a;
     let bValue: any = b;
 
-    if (ifsSortBy === "title") {
+    if (documentSortBy === "title") {
       aValue = a.title;
       bValue = b.title;
-    } else if (ifsSortBy === "author") {
+    } else if (documentSortBy === "author") {
       aValue = a.author;
       bValue = b.author;
-    } else if (ifsSortBy === "fishery") {
-      aValue = a.fisheries?.name || "";
-      bValue = b.fisheries?.name || "";
-    } else if (ifsSortBy === "created_at") {
+    } else if (documentSortBy === "fishery") {
+      aValue = a.fish?.name || "";
+      bValue = b.fish?.name || "";
+    } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);
     }
 
-    if (ifsSortOrder === "asc") {
+    if (documentSortOrder === "asc") {
       return aValue > bValue ? 1 : -1;
     } else {
       return aValue < bValue ? 1 : -1;
     }
   });
 
-  // IFS pagination logic
-  const ifsTotalPages = Math.max(
+  // Document pagination logic
+  const documentTotalPages = Math.max(
     1,
-    Math.ceil(filteredAndSortedIFS.length / ifsPageSize)
+    Math.ceil(filteredAndSortedDocuments.length / documentPageSize)
   );
-  const ifsStartIndex = (ifsCurrentPage - 1) * ifsPageSize;
-  const ifsEndIndex = ifsStartIndex + ifsPageSize;
-  const paginatedIFS = filteredAndSortedIFS.slice(ifsStartIndex, ifsEndIndex);
+  const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
+  const documentEndIndex = documentStartIndex + documentPageSize;
+  const paginatedDocuments = filteredAndSortedDocuments.slice(
+    documentStartIndex,
+    documentEndIndex
+  );
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -254,8 +236,13 @@ const FisheriesManagement = () => {
   }, [fisherySearchTerm, fisherySortBy, fisherySortOrder]);
 
   useEffect(() => {
-    setIfsCurrentPage(1);
-  }, [ifsSearchTerm, selectedIfsFishery, ifsSortBy, ifsSortOrder]);
+    setDocumentCurrentPage(1);
+  }, [
+    documentSearchTerm,
+    selectedDocumentFishery,
+    documentSortBy,
+    documentSortOrder,
+  ]);
 
   // Auto-adjust page if current page exceeds total pages
   useEffect(() => {
@@ -265,10 +252,10 @@ const FisheriesManagement = () => {
   }, [fisheryCurrentPage, fisheryTotalPages]);
 
   useEffect(() => {
-    if (ifsCurrentPage > ifsTotalPages && ifsTotalPages > 0) {
-      setIfsCurrentPage(ifsTotalPages);
+    if (documentCurrentPage > documentTotalPages && documentTotalPages > 0) {
+      setDocumentCurrentPage(documentTotalPages);
     }
-  }, [ifsCurrentPage, ifsTotalPages]);
+  }, [documentCurrentPage, documentTotalPages]);
 
   // Fishery CRUD operations
   const handleFisherySubmit = async (e: React.FormEvent) => {
@@ -304,47 +291,47 @@ const FisheriesManagement = () => {
     setDeleteFisheryId(null);
   };
 
-  // IFS CRUD operations
-  const handleIfsSubmit = async (e: React.FormEvent) => {
+  // Document CRUD operations
+  const handleDocumentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ifsFormData.title || !ifsFormData.author) {
+    if (!documentFormData.title || !documentFormData.author) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    if (!ifsFormData.pdfFile && !editingIfs) {
+    if (!documentFormData.pdfFile && !editingDocument) {
       toast.error("Please select a PDF file");
       return;
     }
 
     const formData = new FormData();
-    if (ifsFormData.fishery_id && ifsFormData.fishery_id !== "none") {
-      formData.append("fishery_id", ifsFormData.fishery_id);
+    if (documentFormData.fish_id && documentFormData.fish_id !== "none") {
+      formData.append("fish_id", documentFormData.fish_id);
     }
-    formData.append("title", ifsFormData.title);
-    formData.append("author", ifsFormData.author);
-    if (ifsFormData.pdfFile) {
-      formData.append("file", ifsFormData.pdfFile);
+    formData.append("title", documentFormData.title);
+    formData.append("author", documentFormData.author);
+    if (documentFormData.pdfFile) {
+      formData.append("file_urls", documentFormData.pdfFile);
     }
 
-    const success = editingIfs
-      ? await updateIFS(editingIfs.id, formData)
-      : await createIFS(formData);
+    const success = editingDocument
+      ? await updateDocument(editingDocument.id, formData)
+      : await createDocument(formData);
 
     if (success) {
-      setIsIfsDialogOpen(false);
-      resetIfsForm();
+      setIsDocumentDialogOpen(false);
+      resetDocumentForm();
     }
   };
 
-  const handleDeleteIfs = async () => {
-    if (!deleteIfsId) return;
-    setDeleteIfsLoading(true);
-    await deleteIFS(deleteIfsId);
-    setDeleteIfsLoading(false);
-    setIsDeleteIfsDialogOpen(false);
-    setDeleteIfsId(null);
+  const handleDeleteDocument = async () => {
+    if (!deleteDocumentId) return;
+    setDeleteDocumentLoading(true);
+    await deleteDocument(deleteDocumentId);
+    setDeleteDocumentLoading(false);
+    setIsDeleteDocumentDialogOpen(false);
+    setDeleteDocumentId(null);
   };
 
   // Form reset functions
@@ -353,35 +340,35 @@ const FisheriesManagement = () => {
     setEditingFishery(null);
   };
 
-  const resetIfsForm = () => {
-    setIfsFormData({
-      fishery_id: "none",
+  const resetDocumentForm = () => {
+    setDocumentFormData({
+      fish_id: "none",
       title: "",
       author: "",
       pdfFile: null,
     });
-    setEditingIfs(null);
+    setEditingDocument(null);
   };
 
   // Edit handlers
   const handleEditFishery = (fishery: Fishery) => {
     setEditingFishery(fishery);
     setFisheryFormData({
-      name: fishery.name,
+      name: fishery.name ?? "",
       image: null,
     });
     setIsFisheryDialogOpen(true);
   };
 
-  const handleEditIfs = (ifs: IFS) => {
-    setEditingIfs(ifs);
-    setIfsFormData({
-      fishery_id: ifs.fishery_id || "none",
-      title: ifs.title,
-      author: ifs.author,
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc);
+    setDocumentFormData({
+      fish_id: doc.fish_id || "none",
+      title: doc.title ?? "",
+      author: doc.author ?? "",
       pdfFile: null,
     });
-    setIsIfsDialogOpen(true);
+    setIsDocumentDialogOpen(true);
   };
 
   // Dialog close handlers
@@ -390,9 +377,9 @@ const FisheriesManagement = () => {
     resetFisheryForm();
   };
 
-  const handleIfsDialogClose = () => {
-    setIsIfsDialogOpen(false);
-    resetIfsForm();
+  const handleDocumentDialogClose = () => {
+    setIsDocumentDialogOpen(false);
+    resetDocumentForm();
   };
 
   // Selection handlers
@@ -423,12 +410,12 @@ const FisheriesManagement = () => {
     }
   };
 
-  const handleSortIfs = (column: string) => {
-    if (ifsSortBy === column) {
-      setIfsSortOrder(ifsSortOrder === "asc" ? "desc" : "asc");
+  const handleSortDocument = (column: string) => {
+    if (documentSortBy === column) {
+      setDocumentSortOrder(documentSortOrder === "asc" ? "desc" : "asc");
     } else {
-      setIfsSortBy(column);
-      setIfsSortOrder("asc");
+      setDocumentSortBy(column);
+      setDocumentSortOrder("asc");
     }
   };
 
@@ -438,9 +425,9 @@ const FisheriesManagement = () => {
     setIsDeleteFisheryDialogOpen(true);
   };
 
-  const openDeleteIfsDialog = (id: string) => {
-    setDeleteIfsId(id);
-    setIsDeleteIfsDialogOpen(true);
+  const openDeleteDocumentDialog = (id: string) => {
+    setDeleteDocumentId(id);
+    setIsDeleteDocumentDialogOpen(true);
   };
 
   // Format date function
@@ -460,9 +447,7 @@ const FisheriesManagement = () => {
           <h1 className="text-3xl font-bold text-gray-900">
             Fisheries Management
           </h1>
-          <p className="text-gray-600 mt-2">
-            Manage fisheries and integrated farming system documents
-          </p>
+          <p className="text-gray-600 mt-2">Manage fisheries and documents</p>
         </div>
         <Button
           variant="outline"
@@ -517,7 +502,7 @@ const FisheriesManagement = () => {
           </CardContent>
         </Card>
 
-        {/* IFS Documents Card */}
+        {/* Documents Card */}
         <Card className="relative overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-bl-full"></div>
           <CardHeader className="pb-3">
@@ -528,7 +513,7 @@ const FisheriesManagement = () => {
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-violet-800 uppercase tracking-wide">
-                    IFS Documents
+                    Documents
                   </CardTitle>
                   <p className="text-xs text-violet-600/80 mt-0.5">
                     Knowledge base
@@ -540,15 +525,15 @@ const FisheriesManagement = () => {
           <CardContent className="pt-0">
             <div className="space-y-3">
               <div className="text-3xl font-bold text-violet-900">
-                {getTotalIFSCount()}
+                {getTotalDocumentsCount()}
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-violet-700 font-medium">
                   {
                     [
                       ...new Set(
-                        ifsList
-                          .map((ifs) => ifs.fishery_id)
+                        documents
+                          .map((doc) => doc.fish_id)
                           .filter((id) => id !== null)
                       ),
                     ].length
@@ -568,7 +553,7 @@ const FisheriesManagement = () => {
       <Tabs defaultValue="fishery" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="fishery">Fisheries</TabsTrigger>
-          <TabsTrigger value="ifs-documents">IFS Documents</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         {/* FISHERY TAB */}

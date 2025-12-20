@@ -45,19 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUserById } from "@/lib/utils";
-
-interface VideoData {
-  id: string;
-  type: "VIDEO";
-  title: string;
-  description: string;
-  author: string;
-  resource_url: string[];
-  filename: string;
-  size: number;
-  uploaded_at: string;
-  is_active: boolean;
-}
+import type { VideoData } from "@/lib/interface";
 
 function VideoManagement() {
   const { user } = useAuth(); // Use auth context for user token

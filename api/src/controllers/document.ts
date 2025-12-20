@@ -5,16 +5,19 @@ export class DocumentController {
     public async getDocuments(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;
+            const { type } = req.query;
                         
-            const data = id ? (await DocumentService.getDocumentById(id)).document
-                : (await DocumentService.getAllDocuments()).documents
-            
-            if (!data) {
-                res.status(404).json({ message: 'Documents not found' });
-                return;
+            if (id) {
+                const { document } = await DocumentService.getDocumentById(id);
+                res.status(200).json({ message: "Get Document(s) successfully", document });
+            } else if (typeof type === 'string') {
+                const { documents } = await DocumentService.getAllDocumentByType(type);
+                res.status(200).json({ message: "Get Document(s) successfully", documents });
+            } else {
+                const { documents } = await DocumentService.getAllDocuments();
+                res.status(200).json({ message: "Get Document(s) successfully", documents });
             }
             
-            res.status(200).json({ message: 'Get all documents successful', data });
             return;
         } catch (error) {
             res.status(500).json({ message: `Error fetching documents: ${error}` });

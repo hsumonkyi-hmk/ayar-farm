@@ -2,40 +2,19 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
-export interface Fishery {
-  id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { Fishery, Document } from "@/lib/interface";
+import { api } from "@/lib/api";
 
-export interface IFS {
-  id: string;
-  crop_type_id?: string;
-  crop_id?: string;
-  livestock_id?: string;
-  fishery_id?: string;
-  machine_type_id?: string;
-  machine_id?: string;
-  title: string;
-  author: string;
-  file_url: string;
-  created_at: string;
-  updated_at: string;
-  fisheries?: Fishery;
-}
-
-export interface FisheryContextType {
+interface FisheryContextType {
   fisheries: Fishery[];
-  ifsList: IFS[];
+  documents: Document[];
 
   isLoading: boolean;
   isUploadingFile: boolean;
   error: string | null;
 
   fetchFisheries: () => Promise<void>;
-  fetchIFS: () => Promise<IFS[]>;
+  fetchDocuments: () => Promise<Document[]>;
   refreshAll: () => Promise<void>;
 
   createFishery: (data: FormData) => Promise<boolean>;
@@ -43,14 +22,14 @@ export interface FisheryContextType {
   deleteFishery: (id: string) => Promise<boolean>;
   bulkDeleteFisheries: (ids: string[]) => Promise<boolean>;
 
-  createIFS: (data: FormData) => Promise<boolean>;
-  updateIFS: (id: string, data: FormData) => Promise<boolean>;
-  deleteIFS: (id: string) => Promise<boolean>;
+  createDocument: (data: FormData) => Promise<boolean>;
+  updateDocument: (id: string, data: FormData) => Promise<boolean>;
+  deleteDocument: (id: string) => Promise<boolean>;
 
   getFisheryById: (id: string) => Fishery | undefined;
-  getIFSById: (id: string) => IFS | undefined;
+  getDocumentById: (id: string) => Document | undefined;
   getTotalFisheriesCount: () => number;
-  getTotalIFSCount: () => number;
+  getTotalDocumentsCount: () => number;
 }
 
 const FisheryContext = createContext<FisheryContextType | undefined>(undefined);
@@ -65,7 +44,7 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
   children,
 }) => {
   const [fisheries, setFisheries] = useState<Fishery[]>([]);
-  const [ifsList, setIFSList] = useState<IFS[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isUploadingFile, setIsUploadingFile] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,26 +63,20 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     }
   };
 
-  const fetchIFS = async (): Promise<IFS[]> => {
+  const fetchDocuments = async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await fetch(`${API_BASE_URL}/ifs/`);
+      const response = await api.get("/document/documents");
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (response && response.data) {
+        const fetchedDocuments = response.data || [];
+        setDocuments(fetchedDocuments);
 
-      const data = await response.json();
-
-      if (data && typeof data === "object") {
-        const fetchedIFS = data.ifsList || [];
-        setIFSList(fetchedIFS);
-
-        if (!data.ifsList && !data.error) {
-          console.warn("Received empty response for IFS");
+        if (!response.data && !response.error) {
+          console.warn("Received empty response for documents");
         }
 
-        return fetchedIFS;
+        return fetchedDocuments;
       } else {
         throw new Error("Invalid response format");
       }
@@ -111,7 +84,7 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       setError(errorMessage);
-      console.error("Error fetching IFS:", errorMessage);
+      console.error("Error fetching documents:", errorMessage);
       throw error;
     }
   };
@@ -119,7 +92,10 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
   const refreshAll = async () => {
     setIsLoading(true);
     try {
-      const results = await Promise.allSettled([fetchFisheries(), fetchIFS()]);
+      const results = await Promise.allSettled([
+        fetchFisheries(),
+        fetchDocuments(),
+      ]);
 
       const failures = results.filter((result) => result.status === "rejected");
       const successes = results.filter(
@@ -247,24 +223,13 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     return fisheries.length;
   };
 
-  const createIFS = async (data: FormData): Promise<boolean> => {
+  const createDocument = async (data: FormData): Promise<boolean> => {
     setIsUploadingFile(true);
-    console.log("Creating IFS with data:", data);
-    console.log("API_BASE_URL:", `${API_BASE_URL}/ifs/`);
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/`, {
-        method: "POST",
-        body: data,
-      });
-      if (!response.ok) {
-        let errorText = await response.text();
-        console.error("Failed to create ifs:", response.status, errorText);
-        throw new Error(
-          `Failed to create ifs: ${response.status} ${errorText}`
-        );
-      }
-      toast.success("IFS created successfully!");
-      await fetchIFS();
+      const token = localStorage.getItem("token");
+      await api.post("/document/documents", data, token || undefined);
+      toast.success("Document created successfully!");
+      await fetchDocuments();
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unknown error");
@@ -274,16 +239,16 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     }
   };
 
-  const updateIFS = async (id: string, data: FormData): Promise<boolean> => {
+  const updateDocument = async (
+    id: string,
+    data: FormData
+  ): Promise<boolean> => {
     setIsUploadingFile(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "PUT",
-        body: data,
-      });
-      if (!response.ok) throw new Error("Failed to update IFS");
-      toast.success("IFS updated successfully!");
-      await fetchIFS();
+      const token = localStorage.getItem("token");
+      await api.put(`/document/documents/${id}`, data, token || undefined);
+      toast.success("Document updated successfully!");
+      await fetchDocuments();
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unknown error");
@@ -293,14 +258,12 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     }
   };
 
-  const deleteIFS = async (id: string): Promise<boolean> => {
+  const deleteDocument = async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/ifs/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete IFS");
-      toast.success("IFS deleted successfully!");
-      await fetchIFS();
+      const token = localStorage.getItem("token");
+      await api.delete(`/document/documents/${id}`, token || undefined);
+      toast.success("Document deleted successfully!");
+      await fetchDocuments();
       return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Unknown error");
@@ -308,13 +271,13 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     }
   };
 
-  const getIFSById = (id: string): IFS | undefined => {
-    return ifsList.find((ifs) => ifs.id === id);
+  const getDocumentById = (id: string): Document | undefined => {
+    return documents.find((doc) => doc.id === id);
   };
 
-  const getTotalIFSCount = (): number => {
-    const fisheryIfs = ifsList.filter((ifs) => ifs.fishery_id);
-    return fisheryIfs.length;
+  const getTotalDocumentsCount = (): number => {
+    const fisheryDocuments = documents.filter((doc) => doc.fish_id);
+    return fisheryDocuments.length;
   };
 
   useEffect(() => {
@@ -323,14 +286,14 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
 
   const value: FisheryContextType = {
     fisheries,
-    ifsList,
+    documents,
 
     isLoading,
     isUploadingFile,
     error,
 
     fetchFisheries,
-    fetchIFS,
+    fetchDocuments,
     refreshAll,
 
     createFishery,
@@ -338,14 +301,14 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     deleteFishery,
     bulkDeleteFisheries,
 
-    createIFS,
-    updateIFS,
-    deleteIFS,
+    createDocument,
+    updateDocument,
+    deleteDocument,
 
     getFisheryById,
-    getIFSById,
+    getDocumentById,
     getTotalFisheriesCount,
-    getTotalIFSCount,
+    getTotalDocumentsCount,
   };
 
   return (
