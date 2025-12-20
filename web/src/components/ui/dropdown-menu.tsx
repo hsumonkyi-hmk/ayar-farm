@@ -36,6 +36,13 @@ function DropdownMenuContent({
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  // Fix: Ensure pointer-events are restored when dropdown closes
+  React.useEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = ""
+    }
+  }, [])
+
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content

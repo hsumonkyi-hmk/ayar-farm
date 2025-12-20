@@ -1,9 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import LivestockProvider, {
-  useLivestock,
-} from "@/providers/livestock-provider.tsx";
+import LivestockProvider from "@/providers/livestock-provider";
+import { useLivestock } from "@/context/livestock-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Edit,
@@ -135,33 +134,37 @@ const LivestockManagement = () => {
   const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions for Livestock
-  const filteredLivestock = livestocks.filter((livestock) =>
-    livestock.name.toLowerCase().includes(livestockSearchTerm.toLowerCase())
-  );
+  const filteredAndSortedLivestock = useMemo(() => {
+    const filtered = livestocks.filter((livestock) =>
+      (livestock.name || "")
+        .toLowerCase()
+        .includes(livestockSearchTerm.toLowerCase())
+    );
 
-  const filteredAndSortedLivestock = filteredLivestock.sort((a, b) => {
-    if (!livestockSortBy) return 0;
+    return filtered.sort((a, b) => {
+      if (!livestockSortBy) return 0;
 
-    let aValue: any = a;
-    let bValue: any = b;
+      let aValue: any = a;
+      let bValue: any = b;
 
-    if (livestockSortBy === "name") {
-      aValue = a.name;
-      bValue = b.name;
-    } else if (livestockSortBy === "created_at") {
-      aValue = new Date(a.created_at);
-      bValue = new Date(b.created_at);
-    } else if (livestockSortBy === "updated_at") {
-      aValue = new Date(a.updated_at);
-      bValue = new Date(b.updated_at);
-    }
+      if (livestockSortBy === "name") {
+        aValue = a.name || "";
+        bValue = b.name || "";
+      } else if (livestockSortBy === "created_at") {
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
+      } else if (livestockSortBy === "updated_at") {
+        aValue = new Date(a.updated_at);
+        bValue = new Date(b.updated_at);
+      }
 
-    if (livestockSortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+      if (livestockSortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [livestocks, livestockSearchTerm, livestockSortBy, livestockSortOrder]);
 
   // Livestock pagination logic
   const livestockTotalPages = Math.max(
@@ -170,61 +173,74 @@ const LivestockManagement = () => {
   );
   const livestockStartIndex = (livestockCurrentPage - 1) * livestockPageSize;
   const livestockEndIndex = livestockStartIndex + livestockPageSize;
-  const paginatedLivestock = filteredAndSortedLivestock.slice(
-    livestockStartIndex,
-    livestockEndIndex
+  const paginatedLivestock = useMemo(
+    () =>
+      filteredAndSortedLivestock.slice(livestockStartIndex, livestockEndIndex),
+    [filteredAndSortedLivestock, livestockStartIndex, livestockEndIndex]
   );
 
-  const documentsWithLivestock = documents.map((doc) => ({
-    ...doc,
-    livestocks:
-      doc.Livestocks || livestocks.find((l) => l.id === doc.livestock_id),
-  }));
+  const documentsWithLivestock = useMemo(
+    () =>
+      documents.map((doc) => ({
+        ...doc,
+        livestocks:
+          doc.Livestocks || livestocks.find((l) => l.id === doc.livestock_id),
+      })),
+    [documents, livestocks]
+  );
 
   // Filter and sort functions for Document (only show those with livestock_id)
-  const filteredDocuments = documentsWithLivestock
-    .filter((doc) => doc.livestock_id != null)
-    .filter((doc) => {
-      const searchTerm = documentSearchTerm.toLowerCase();
-      const matchesSearch =
-        doc.livestocks?.name?.toLowerCase().includes(searchTerm) ||
-        doc.title?.toLowerCase().includes(searchTerm) ||
-        doc.author?.toLowerCase().includes(searchTerm);
+  const filteredAndSortedDocuments = useMemo(() => {
+    const filtered = documentsWithLivestock
+      .filter((doc) => doc.livestock_id != null)
+      .filter((doc) => {
+        const searchTerm = documentSearchTerm.toLowerCase();
+        const matchesSearch =
+          (doc.livestocks?.name || "").toLowerCase().includes(searchTerm) ||
+          (doc.title || "").toLowerCase().includes(searchTerm) ||
+          (doc.author || "").toLowerCase().includes(searchTerm);
 
-      const matchesLivestock =
-        selectedDocumentLivestock === "" ||
-        selectedDocumentLivestock === "all_livestock" ||
-        doc.livestock_id === selectedDocumentLivestock;
+        const matchesLivestock =
+          selectedDocumentLivestock === "" ||
+          selectedDocumentLivestock === "all_livestock" ||
+          doc.livestock_id === selectedDocumentLivestock;
 
-      return matchesSearch && matchesLivestock;
+        return matchesSearch && matchesLivestock;
+      });
+
+    return filtered.sort((a, b) => {
+      if (!documentSortBy) return 0;
+
+      let aValue: any = a;
+      let bValue: any = b;
+
+      if (documentSortBy === "title") {
+        aValue = a.title || "";
+        bValue = b.title || "";
+      } else if (documentSortBy === "author") {
+        aValue = a.author || "";
+        bValue = b.author || "";
+      } else if (documentSortBy === "livestock") {
+        aValue = a.livestocks?.name || "";
+        bValue = b.livestocks?.name || "";
+      } else if (documentSortBy === "created_at") {
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
+      }
+
+      if (documentSortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
     });
-
-  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
-    if (!documentSortBy) return 0;
-
-    let aValue: any = a;
-    let bValue: any = b;
-
-    if (documentSortBy === "title") {
-      aValue = a.title;
-      bValue = b.title;
-    } else if (documentSortBy === "author") {
-      aValue = a.author;
-      bValue = b.author;
-    } else if (documentSortBy === "livestock") {
-      aValue = a.livestocks?.name || "";
-      bValue = b.livestocks?.name || "";
-    } else if (documentSortBy === "created_at") {
-      aValue = new Date(a.created_at);
-      bValue = new Date(b.created_at);
-    }
-
-    if (documentSortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+  }, [
+    documentsWithLivestock,
+    documentSearchTerm,
+    selectedDocumentLivestock,
+    documentSortBy,
+    documentSortOrder,
+  ]);
 
   // Document pagination logic
   const documentTotalPages = Math.max(
@@ -233,9 +249,10 @@ const LivestockManagement = () => {
   );
   const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
   const documentEndIndex = documentStartIndex + documentPageSize;
-  const paginatedDocuments = filteredAndSortedDocuments.slice(
-    documentStartIndex,
-    documentEndIndex
+  const paginatedDocuments = useMemo(
+    () =>
+      filteredAndSortedDocuments.slice(documentStartIndex, documentEndIndex),
+    [filteredAndSortedDocuments, documentStartIndex, documentEndIndex]
   );
 
   // Reset pagination when filters change
@@ -277,7 +294,7 @@ const LivestockManagement = () => {
     const formData = new FormData();
     formData.append("name", livestockFormData.name);
     if (livestockFormData.image) {
-      formData.append("file", livestockFormData.image);
+      formData.append("image_urls", livestockFormData.image);
     }
 
     const success = editingLivestock
@@ -747,7 +764,9 @@ const LivestockManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedLivestock.map((livestock) => (
-                    <TableRow key={livestock.id}>
+                    <TableRow
+                      key={livestock.id || `livestock-${Math.random()}`}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedLivestock.includes(livestock.id)}
@@ -758,7 +777,7 @@ const LivestockManagement = () => {
                       </TableCell>
                       <TableCell>
                         <img
-                          src={livestock.image_url || "/placeholder-image.png"}
+                          src={livestock.image_urls?.[0] || "/placeholder-image.png"}
                           alt={livestock.name}
                           className="w-10 h-10 rounded-md object-cover"
                         />
@@ -1085,7 +1104,7 @@ const LivestockManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedDocuments.map((doc) => (
-                    <TableRow key={doc.id}>
+                    <TableRow key={doc.id || `doc-${Math.random()}`}>
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{doc.author}</TableCell>
                       <TableCell>

@@ -29,7 +29,7 @@ export interface Crop {
 export interface Fishery {
   id: string;
   name: string;
-  image_url: string;
+  image_urls: string;
   created_at: string;
   updated_at: string;
 }
@@ -37,7 +37,7 @@ export interface Fishery {
 export interface Livestock {
   id: string;
   name: string;
-  image_url: string;
+  image_urls: string;
   created_at: string;
   updated_at: string;
 }
@@ -45,7 +45,7 @@ export interface Livestock {
 export interface MachineType {
   id: string;
   name: string;
-  image_url: string;
+  image_urls: string;
   created_at: string;
   updated_at: string;
   _count: {
@@ -57,7 +57,7 @@ export interface Machine {
   id: string;
   name: string;
   model_number: string;
-  image_url: string;
+  image_urls: string;
   type_id: string;
   created_at: string;
   updated_at: string;

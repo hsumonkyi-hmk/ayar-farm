@@ -58,7 +58,7 @@ export class FishController {
             const newImageUrls = files ? files.map((file) => file.path) : [];
             const image_urls = [...existingFish!.image_urls, ...newImageUrls];
             
-            const updatedFish = (await FishService.updateFish(id, name, description, image_urls));
+            const updatedFish = (await FishService.updateFish(id, name, description, image_urls)).fish;
 
             res.status(200).json({ message: 'Fish updated successfully', data: updatedFish });
             return;

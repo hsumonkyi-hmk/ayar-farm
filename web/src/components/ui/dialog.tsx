@@ -32,6 +32,13 @@ function DialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+  // Fix: Ensure pointer-events are restored when overlay unmounts
+  React.useEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = ""
+    }
+  }, [])
+
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
@@ -52,6 +59,18 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  // Fix: Ensure pointer-events are restored when dialog closes to prevent blocking clicks
+  React.useEffect(() => {
+    return () => {
+      // Immediate restore
+      document.body.style.pointerEvents = ""
+      // Delayed restore to handle animations
+      setTimeout(() => {
+        document.body.style.pointerEvents = ""
+      }, 500)
+    }
+  }, [])
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />

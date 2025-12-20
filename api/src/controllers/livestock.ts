@@ -123,7 +123,7 @@ export class LivestockController {
             const newImageUrls = files ? files.map((file) => file.path) : [];
             const image_urls = [...existingLivestock!.image_urls, ...newImageUrls];
             
-            const updatedLivestock = (await LivestockService.updateLivestock(id, livestock_type_id, name, description, image_urls));
+            const updatedLivestock = (await LivestockService.updateLivestock(id, livestock_type_id, name, description, image_urls)).livestock;
 
             res.status(200).json({ message: 'Livestock updated successfully', data: updatedLivestock });
             return;

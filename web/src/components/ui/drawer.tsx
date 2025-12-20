@@ -31,6 +31,13 @@ function DrawerOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
+  // Fix: Ensure pointer-events are restored when overlay unmounts
+  React.useEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = ""
+    }
+  }, [])
+
   return (
     <DrawerPrimitive.Overlay
       data-slot="drawer-overlay"
@@ -48,6 +55,18 @@ function DrawerContent({
   children,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  // Fix: Ensure pointer-events are restored when drawer closes
+  React.useEffect(() => {
+    return () => {
+      // Immediate restore
+      document.body.style.pointerEvents = ""
+      // Delayed restore to handle animations
+      setTimeout(() => {
+        document.body.style.pointerEvents = ""
+      }, 500)
+    }
+  }, [])
+
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />

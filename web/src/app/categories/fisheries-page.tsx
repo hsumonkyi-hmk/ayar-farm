@@ -1,7 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import FisheryProvider, { useFishery } from "@/providers/fishery-provider.tsx";
+import FisheryProvider from "@/providers/fishery-provider";
+import { useFishery } from "@/context/fishery-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Edit,
@@ -128,33 +129,37 @@ const FisheriesManagement = () => {
   const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions for Fishery
-  const filteredFishery = fisheries.filter((fishery) =>
-    fishery.name.toLowerCase().includes(fisherySearchTerm.toLowerCase())
-  );
+  const filteredAndSortedFishery = useMemo(() => {
+    const filtered = fisheries.filter((fishery) =>
+      (fishery.name || "")
+        .toLowerCase()
+        .includes(fisherySearchTerm.toLowerCase())
+    );
 
-  const filteredAndSortedFishery = filteredFishery.sort((a, b) => {
-    if (!fisherySortBy) return 0;
+    return filtered.sort((a, b) => {
+      if (!fisherySortBy) return 0;
 
-    let aValue: any = a;
-    let bValue: any = b;
+      let aValue: any = a;
+      let bValue: any = b;
 
-    if (fisherySortBy === "name") {
-      aValue = a.name;
-      bValue = b.name;
-    } else if (fisherySortBy === "created_at") {
-      aValue = new Date(a.created_at);
-      bValue = new Date(b.created_at);
-    } else if (fisherySortBy === "updated_at") {
-      aValue = new Date(a.updated_at);
-      bValue = new Date(b.updated_at);
-    }
+      if (fisherySortBy === "name") {
+        aValue = a.name || "";
+        bValue = b.name || "";
+      } else if (fisherySortBy === "created_at") {
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
+      } else if (fisherySortBy === "updated_at") {
+        aValue = new Date(a.updated_at);
+        bValue = new Date(b.updated_at);
+      }
 
-    if (fisherySortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+      if (fisherySortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [fisheries, fisherySearchTerm, fisherySortBy, fisherySortOrder]);
 
   // Fishery pagination logic
   const fisheryTotalPages = Math.max(
@@ -163,60 +168,72 @@ const FisheriesManagement = () => {
   );
   const fisheryStartIndex = (fisheryCurrentPage - 1) * fisheryPageSize;
   const fisheryEndIndex = fisheryStartIndex + fisheryPageSize;
-  const paginatedFishery = filteredAndSortedFishery.slice(
-    fisheryStartIndex,
-    fisheryEndIndex
+  const paginatedFishery = useMemo(
+    () => filteredAndSortedFishery.slice(fisheryStartIndex, fisheryEndIndex),
+    [filteredAndSortedFishery, fisheryStartIndex, fisheryEndIndex]
   );
 
-  const documentsWithFishery = documents.map((doc) => ({
-    ...doc,
-    Fisheries: doc.Fisheries || fisheries.find((l) => l.id === doc.fish_id),
-  }));
+  const documentsWithFishery = useMemo(
+    () =>
+      documents.map((doc) => ({
+        ...doc,
+        Fisheries: doc.Fisheries || fisheries.find((l) => l.id === doc.fish_id),
+      })),
+    [documents, fisheries]
+  );
 
   // Filter and sort functions for Document (only show those with fish_id)
-  const filteredDocuments = documentsWithFishery
-    .filter((doc) => doc.fish_id != null)
-    .filter((doc) => {
-      const searchTerm = documentSearchTerm.toLowerCase();
-      const matchesSearch =
-        doc.Fisheries?.name?.toLowerCase().includes(searchTerm) ||
-        doc.title?.toLowerCase().includes(searchTerm) ||
-        doc.author?.toLowerCase().includes(searchTerm);
+  const filteredAndSortedDocuments = useMemo(() => {
+    const filtered = documentsWithFishery
+      .filter((doc) => doc.fish_id != null)
+      .filter((doc) => {
+        const searchTerm = documentSearchTerm.toLowerCase();
+        const matchesSearch =
+          (doc.Fisheries?.name || "").toLowerCase().includes(searchTerm) ||
+          (doc.title || "").toLowerCase().includes(searchTerm) ||
+          (doc.author || "").toLowerCase().includes(searchTerm);
 
-      const matchesFishery =
-        selectedDocumentFishery === "" ||
-        selectedDocumentFishery === "all_fisheries" ||
-        doc.fish_id === selectedDocumentFishery;
+        const matchesFishery =
+          selectedDocumentFishery === "" ||
+          selectedDocumentFishery === "all_fisheries" ||
+          doc.fish_id === selectedDocumentFishery;
 
-      return matchesSearch && matchesFishery;
+        return matchesSearch && matchesFishery;
+      });
+
+    return filtered.sort((a, b) => {
+      if (!documentSortBy) return 0;
+
+      let aValue: any = a;
+      let bValue: any = b;
+
+      if (documentSortBy === "title") {
+        aValue = a.title || "";
+        bValue = b.title || "";
+      } else if (documentSortBy === "author") {
+        aValue = a.author || "";
+        bValue = b.author || "";
+      } else if (documentSortBy === "fishery") {
+        aValue = a.Fisheries?.name || "";
+        bValue = b.Fisheries?.name || "";
+      } else if (documentSortBy === "created_at") {
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
+      }
+
+      if (documentSortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
     });
-
-  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
-    if (!documentSortBy) return 0;
-
-    let aValue: any = a;
-    let bValue: any = b;
-
-    if (documentSortBy === "title") {
-      aValue = a.title;
-      bValue = b.title;
-    } else if (documentSortBy === "author") {
-      aValue = a.author;
-      bValue = b.author;
-    } else if (documentSortBy === "fishery") {
-      aValue = a.Fisheries?.name || "";
-      bValue = b.Fisheries?.name || "";
-    } else if (documentSortBy === "created_at") {
-      aValue = new Date(a.created_at);
-      bValue = new Date(b.created_at);
-    }
-
-    if (documentSortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+  }, [
+    documentsWithFishery,
+    documentSearchTerm,
+    selectedDocumentFishery,
+    documentSortBy,
+    documentSortOrder,
+  ]);
 
   // Document pagination logic
   const documentTotalPages = Math.max(
@@ -225,9 +242,10 @@ const FisheriesManagement = () => {
   );
   const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
   const documentEndIndex = documentStartIndex + documentPageSize;
-  const paginatedDocuments = filteredAndSortedDocuments.slice(
-    documentStartIndex,
-    documentEndIndex
+  const paginatedDocuments = useMemo(
+    () =>
+      filteredAndSortedDocuments.slice(documentStartIndex, documentEndIndex),
+    [filteredAndSortedDocuments, documentStartIndex, documentEndIndex]
   );
 
   // Reset pagination when filters change
@@ -269,7 +287,7 @@ const FisheriesManagement = () => {
     const formData = new FormData();
     formData.append("name", fisheryFormData.name);
     if (fisheryFormData.image) {
-      formData.append("file", fisheryFormData.image);
+      formData.append("image_urls", fisheryFormData.image);
     }
 
     const success = editingFishery
@@ -731,7 +749,7 @@ const FisheriesManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedFishery.map((fishery) => (
-                    <TableRow key={fishery.id}>
+                    <TableRow key={fishery.id || `fishery-${Math.random()}`}>
                       <TableCell>
                         <Checkbox
                           checked={selectedFishery.includes(fishery.id)}
@@ -742,7 +760,9 @@ const FisheriesManagement = () => {
                       </TableCell>
                       <TableCell>
                         <img
-                          src={fishery.image_url || "/placeholder-image.png"}
+                          src={
+                            fishery.image_urls?.[0] || "/placeholder-image.png"
+                          }
                           alt={fishery.name}
                           className="w-10 h-10 rounded-md object-cover"
                         />
@@ -1065,7 +1085,7 @@ const FisheriesManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedDocuments.map((doc) => (
-                    <TableRow key={doc.id}>
+                    <TableRow key={doc.id || `doc-${Math.random()}`}>
                       <TableCell className="font-medium">{doc.title}</TableCell>
                       <TableCell>{doc.author}</TableCell>
                       <TableCell>

@@ -123,7 +123,11 @@ export class CropController {
             const newImageUrls = files ? files.map((file) => file.path) : [];
             const image_urls = [...existingCrop!.image_urls, ...newImageUrls];
             
-            const updatedCrop = (await CropService.updateCrop(id, crop_type_id, name, description, image_urls));
+            const updatedCrop = (await CropService.updateCrop(id, crop_type_id, name, description, image_urls)).crop;
+
+            if (!updatedCrop) {
+                console.log("FAIL UPDATE");
+            }
 
             res.status(200).json({ message: 'Crop updated successfully', data: updatedCrop });
             return;

@@ -1,46 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import type { Fishery, Document } from "@/lib/interface";
 import { api } from "@/lib/api";
-
-interface FisheryContextType {
-  fisheries: Fishery[];
-  documents: Document[];
-
-  isLoading: boolean;
-  isUploadingFile: boolean;
-  error: string | null;
-
-  fetchFisheries: () => Promise<void>;
-  fetchDocuments: () => Promise<Document[]>;
-  refreshAll: () => Promise<void>;
-
-  createFishery: (data: FormData) => Promise<boolean>;
-  updateFishery: (id: string, data: FormData) => Promise<boolean>;
-  deleteFishery: (id: string) => Promise<boolean>;
-  bulkDeleteFisheries: (ids: string[]) => Promise<boolean>;
-
-  createDocument: (data: FormData) => Promise<boolean>;
-  updateDocument: (id: string, data: FormData) => Promise<boolean>;
-  deleteDocument: (id: string) => Promise<boolean>;
-
-  getFisheryById: (id: string) => Fishery | undefined;
-  getDocumentById: (id: string) => Document | undefined;
-  getTotalFisheriesCount: () => number;
-  getTotalDocumentsCount: () => number;
-}
-
-const FisheryContext = createContext<FisheryContextType | undefined>(undefined);
-
-interface FisheryProviderProps {
-  children: ReactNode;
-}
+import { FisheryContext } from "@/context/fishery-context";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-export const FisheryProvider: React.FC<FisheryProviderProps> = ({
+export const FisheryProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [fisheries, setFisheries] = useState<Fishery[]>([]);
@@ -49,47 +17,37 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
   const [isUploadingFile, setIsUploadingFile] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFisheries = async () => {
+  const fetchFisheries = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/fishery/fisheries`);
-      if (!response.ok) throw new Error("Failed to fetch fisheries");
-      const data = await response.json();
-      setFisheries(data.fisheries);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const response = await api.get("/fishery/fishs");
+      setFisheries(response.data || []);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchDocuments = async (): Promise<Document[]> => {
+  const fetchDocuments = useCallback(async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await api.get("/document/documents");
-
-      if (response && response.data) {
-        const fetchedDocuments = response.data || [];
-        setDocuments(fetchedDocuments);
-
-        if (!response.data && !response.error) {
-          console.warn("Received empty response for documents");
-        }
-
-        return fetchedDocuments;
-      } else {
-        throw new Error("Invalid response format");
-      }
-    } catch (error) {
+      const response = await api.get("/document/documents?type=fish");
+      const fetchedDocuments = response.documents || [];
+      setDocuments(fetchedDocuments);
+      return fetchedDocuments;
+    } catch (err: any) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to fetch documents";
       setError(errorMessage);
-      console.error("Error fetching documents:", errorMessage);
-      throw error;
+      console.error("Fetch documents error:", err);
+      throw err;
     }
-  };
+  }, []);
 
-  const refreshAll = async () => {
+  const refreshAll = useCallback(async () => {
     setIsLoading(true);
     try {
       const results = await Promise.allSettled([
@@ -130,198 +88,245 @@ export const FisheryProvider: React.FC<FisheryProviderProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchFisheries, fetchDocuments]);
 
   // CRUD operations for Fisheries
-  const createFishery = async (data: FormData): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/fishery/fisheries`, {
-        method: "POST",
-        body: data,
-      });
-      if (!response.ok) {
-        let errorText = await response.text();
-        console.error("Failed to create fishery:", response.status, errorText);
-        throw new Error(
-          `Failed to create fishery: ${response.status} ${errorText}`
+  const createFishery = useCallback(
+    async (data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.post(
+          "/fishery/fishs",
+          data,
+          token || undefined
         );
+        toast.success("Fishery created successfully");
+        setFisheries((prev) => [response.data, ...prev]);
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
       }
-      toast.success("Fishery created successfully");
-      await fetchFisheries();
-      return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+    },
+    []
+  );
 
-  const updateFishery = async (
-    id: string,
-    data: FormData
-  ): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/fishery/fisheries/${id}`, {
-        method: "PUT",
-        body: data,
-      });
-      if (!response.ok)
-        throw new Error(`Failed to update fishery: ${response.status}`);
-      toast.success("Fishery updated successfully");
-      await fetchFisheries();
-      return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const updateFishery = useCallback(
+    async (id: string, data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.put(
+          `/fishery/fishs/${id}`,
+          data,
+          token || undefined
+        );
+        toast.success("Fishery updated successfully");
+        setFisheries((prev) =>
+          prev.map((item) => (item.id === id ? response.data : item))
+        );
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const deleteFishery = async (id: string): Promise<boolean> => {
+  const deleteFishery = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/fishery/fisheries/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) throw new Error("Failed to delete fishery");
+      const token = localStorage.getItem("token");
+      await api.delete(`/fishery/fishs/${id}`, token || undefined);
       toast.success("Fishery deleted successfully");
-      await fetchFisheries();
+      setFisheries((prev) => prev.filter((item) => item.id !== id));
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     }
-  };
+  }, []);
 
-  const bulkDeleteFisheries = async (ids: string[]): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/fishery/fisheries/`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ids }),
-      });
-      if (!response.ok) throw new Error("Failed to bulk delete fishery");
-      toast.success("Fishery deleted successfully!");
-      await fetchFisheries();
-      return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
-      return false;
-    }
-  };
+  const bulkDeleteFisheries = useCallback(
+    async (ids: string[]): Promise<boolean> => {
+      try {
+        const token = localStorage.getItem("token");
+        await api.post(
+          "/fishery/fishs/bulk-delete",
+          { ids },
+          token || undefined
+        );
+        toast.success("Fishery deleted successfully!");
+        setFisheries((prev) => prev.filter((item) => !ids.includes(item.id)));
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      }
+    },
+    []
+  );
 
-  const getFisheryById = (id: string): Fishery | undefined => {
-    return fisheries.find((fishery) => fishery.id === id);
-  };
+  const getFisheryById = useCallback(
+    (id: string): Fishery | undefined => {
+      return fisheries.find((fishery) => fishery.id === id);
+    },
+    [fisheries]
+  );
 
-  const getTotalFisheriesCount = (): number => {
+  const getTotalFisheriesCount = useCallback((): number => {
     return fisheries.length;
-  };
+  }, [fisheries]);
 
-  const createDocument = async (data: FormData): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      await api.post("/document/documents", data, token || undefined);
-      toast.success("Document created successfully!");
-      await fetchDocuments();
-      return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const createDocument = useCallback(
+    async (data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.post(
+          "/document/documents",
+          data,
+          token || undefined
+        );
+        toast.success("Document created successfully!");
+        setDocuments((prev) => [response.data, ...prev]);
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const updateDocument = async (
-    id: string,
-    data: FormData
-  ): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      await api.put(`/document/documents/${id}`, data, token || undefined);
-      toast.success("Document updated successfully!");
-      await fetchDocuments();
-      return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const updateDocument = useCallback(
+    async (id: string, data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.put(
+          `/document/documents/${id}`,
+          data,
+          token || undefined
+        );
+        toast.success("Document updated successfully!");
+        setDocuments((prev) =>
+          prev.map((item) => (item.id === id ? response.data : item))
+        );
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const deleteDocument = async (id: string): Promise<boolean> => {
+  const deleteDocument = useCallback(async (id: string): Promise<boolean> => {
     try {
       const token = localStorage.getItem("token");
       await api.delete(`/document/documents/${id}`, token || undefined);
       toast.success("Document deleted successfully!");
-      await fetchDocuments();
+      setDocuments((prev) => prev.filter((item) => item.id !== id));
       return true;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Unknown error");
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || err.message || "Unknown error"
+      );
       return false;
     }
-  };
+  }, []);
 
-  const getDocumentById = (id: string): Document | undefined => {
-    return documents.find((doc) => doc.id === id);
-  };
+  const getDocumentById = useCallback(
+    (id: string): Document | undefined => {
+      return documents.find((doc) => doc.id === id);
+    },
+    [documents]
+  );
 
-  const getTotalDocumentsCount = (): number => {
+  const getTotalDocumentsCount = useCallback((): number => {
     const fisheryDocuments = documents.filter((doc) => doc.fish_id);
     return fisheryDocuments.length;
-  };
+  }, [documents]);
 
   useEffect(() => {
     refreshAll();
   }, []);
 
-  const value: FisheryContextType = {
-    fisheries,
-    documents,
+  const value = useMemo(
+    () => ({
+      fisheries,
+      documents,
 
-    isLoading,
-    isUploadingFile,
-    error,
+      isLoading,
+      isUploadingFile,
+      error,
 
-    fetchFisheries,
-    fetchDocuments,
-    refreshAll,
+      fetchFisheries,
+      fetchDocuments,
+      refreshAll,
 
-    createFishery,
-    updateFishery,
-    deleteFishery,
-    bulkDeleteFisheries,
+      createFishery,
+      updateFishery,
+      deleteFishery,
+      bulkDeleteFisheries,
 
-    createDocument,
-    updateDocument,
-    deleteDocument,
+      createDocument,
+      updateDocument,
+      deleteDocument,
 
-    getFisheryById,
-    getDocumentById,
-    getTotalFisheriesCount,
-    getTotalDocumentsCount,
-  };
+      getFisheryById,
+      getDocumentById,
+      getTotalFisheriesCount,
+      getTotalDocumentsCount,
+    }),
+    [
+      fisheries,
+      documents,
+      isLoading,
+      isUploadingFile,
+      error,
+      fetchFisheries,
+      fetchDocuments,
+      refreshAll,
+      createFishery,
+      updateFishery,
+      deleteFishery,
+      bulkDeleteFisheries,
+      createDocument,
+      updateDocument,
+      deleteDocument,
+      getFisheryById,
+      getDocumentById,
+      getTotalFisheriesCount,
+      getTotalDocumentsCount,
+    ]
+  );
 
   return (
     <FisheryContext.Provider value={value}>{children}</FisheryContext.Provider>
   );
-};
-
-export const useFishery = (): FisheryContextType => {
-  const context = useContext(FisheryContext);
-  if (!context) {
-    throw new Error("useFishery must be used within a FisheryProvider");
-  }
-  return context;
 };
 
 export default FisheryProvider;

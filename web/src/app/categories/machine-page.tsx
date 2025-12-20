@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import MachineProvider, { useMachine } from "@/providers/machine-provider";
+import MachineProvider from "@/providers/machine-provider";
+import { useMachine } from "@/context/machine-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -173,8 +174,10 @@ const MachinesManagement = () => {
   const filteredAndSortedMachines = machines
     .filter((machine) => {
       const matchesSearch =
-        machine.name.toLowerCase().includes(machineSearchTerm.toLowerCase()) ||
-        machine.model_number
+        (machine.name || "")
+          .toLowerCase()
+          .includes(machineSearchTerm.toLowerCase()) ||
+        (machine.model_number || "")
           .toLowerCase()
           .includes(machineSearchTerm.toLowerCase());
       const matchesType =
@@ -190,14 +193,14 @@ const MachinesManagement = () => {
       let bValue: any = b;
 
       if (sortBy === "name") {
-        aValue = a.name;
-        bValue = b.name;
+        aValue = a.name || "";
+        bValue = b.name || "";
       } else if (sortBy === "model_number") {
-        aValue = a.model_number;
-        bValue = b.model_number;
+        aValue = a.model_number || "";
+        bValue = b.model_number || "";
       } else if (sortBy === "type") {
-        aValue = a.type.name;
-        bValue = b.type.name;
+        aValue = a.type?.name || "";
+        bValue = b.type?.name || "";
       } else if (sortBy === "created_at") {
         aValue = new Date(a.created_at);
         bValue = new Date(b.created_at);
@@ -213,7 +216,9 @@ const MachinesManagement = () => {
   // Filter and sort functions for Machine Types
   const filteredAndSortedMachineTypes = machineTypes
     .filter((type) =>
-      type.name.toLowerCase().includes(machineTypeSearchTerm.toLowerCase())
+      (type.name || "")
+        .toLowerCase()
+        .includes(machineTypeSearchTerm.toLowerCase())
     )
     .sort((a, b) => {
       if (!machineTypeSortBy) return 0;
@@ -222,8 +227,8 @@ const MachinesManagement = () => {
       let bValue: any = b;
 
       if (machineTypeSortBy === "name") {
-        aValue = a.name;
-        bValue = b.name;
+        aValue = a.name || "";
+        bValue = b.name || "";
       } else if (machineTypeSortBy === "machinesCount") {
         aValue = a._count?.machines || 0;
         bValue = b._count?.machines || 0;
@@ -242,9 +247,9 @@ const MachinesManagement = () => {
   const filteredDocuments = documents.filter((doc) => {
     const searchTerm = documentSearchTerm.toLowerCase();
     const matchesSearch =
-      doc.MachineTypes?.name.toLowerCase().includes(searchTerm) ||
-      doc.Machines?.name.toLowerCase().includes(searchTerm) ||
-      doc.title.toLowerCase().includes(searchTerm);
+      (doc.MachineTypes?.name || "").toLowerCase().includes(searchTerm) ||
+      (doc.Machines?.name || "").toLowerCase().includes(searchTerm) ||
+      (doc.title || "").toLowerCase().includes(searchTerm);
 
     const matchesMachineType =
       selectedDocumentMachineType === "" ||
@@ -267,11 +272,11 @@ const MachinesManagement = () => {
     let bValue: any = b;
 
     if (documentSortBy === "title") {
-      aValue = a.title;
-      bValue = b.title;
+      aValue = a.title || "";
+      bValue = b.title || "";
     } else if (documentSortBy === "author") {
-      aValue = a.author;
-      bValue = b.author;
+      aValue = a.author || "";
+      bValue = b.author || "";
     } else if (documentSortBy === "file_url") {
       aValue = a.file_urls?.[0] || "";
       bValue = b.file_urls?.[0] || "";
@@ -358,9 +363,9 @@ const MachinesManagement = () => {
     const formData = new FormData();
     formData.append("name", machineFormData.name);
     formData.append("model_number", machineFormData.model_number);
-    formData.append("type_id", machineFormData.type_id);
+    formData.append("machine_type_id", machineFormData.type_id);
     if (machineFormData.image) {
-      formData.append("file", machineFormData.image);
+      formData.append("image_urls", machineFormData.image);
     }
 
     const success = editingMachine
@@ -394,7 +399,7 @@ const MachinesManagement = () => {
     const formData = new FormData();
     formData.append("name", machineTypeFormData.name);
     if (machineTypeFormData.image) {
-      formData.append("file", machineTypeFormData.image);
+      formData.append("image_urls", machineTypeFormData.image);
     }
 
     const success = editingMachineType
@@ -991,7 +996,9 @@ const MachinesManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedMachineTypes.map((machineType) => (
-                    <TableRow key={machineType.id}>
+                    <TableRow
+                      key={machineType.id || `machine-type-${Math.random()}`}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedMachineTypes.includes(
@@ -1005,7 +1012,8 @@ const MachinesManagement = () => {
                       <TableCell>
                         <img
                           src={
-                            machineType.image_url || "/placeholder-image.png"
+                            machineType.image_urls?.[0] ||
+                            "/placeholder-image.png"
                           }
                           alt={machineType.name}
                           className="w-10 h-10 rounded-md object-cover"
@@ -1382,7 +1390,7 @@ const MachinesManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedMachines.map((machine) => (
-                    <TableRow key={machine.id}>
+                    <TableRow key={machine.id || `machine-${Math.random()}`}>
                       <TableCell>
                         <Checkbox
                           checked={selectedMachines.includes(machine.id)}
@@ -1393,7 +1401,9 @@ const MachinesManagement = () => {
                       </TableCell>
                       <TableCell>
                         <img
-                          src={machine.image_url || "/placeholder-image.png"}
+                          src={
+                            machine.image_urls?.[0] || "/placeholder-image.png"
+                          }
                           alt={machine.name}
                           className="w-10 h-10 rounded-md object-cover"
                         />
@@ -1826,7 +1836,7 @@ const MachinesManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedDocuments.map((doc) => (
-                    <TableRow key={doc.id}>
+                    <TableRow key={doc.id || `doc-${Math.random()}`}>
                       <TableCell>
                         <div className="flex items-center">
                           <span className="font-medium">{doc.title}</span>
@@ -1976,11 +1986,11 @@ const MachinesManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Machine</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this machine? This action cannot
+              be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            Are you sure you want to delete this machine? This action cannot be
-            undone.
-          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -2014,11 +2024,11 @@ const MachinesManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Machine Type</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this machine type? This action
+              cannot be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            Are you sure you want to delete this machine type? This action
-            cannot be undone.
-          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -2052,11 +2062,11 @@ const MachinesManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Document</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this document? This action cannot
+              be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            Are you sure you want to delete this document? This action cannot be
-            undone.
-          </div>
           <DialogFooter>
             <Button
               variant="outline"

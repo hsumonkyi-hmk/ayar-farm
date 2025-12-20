@@ -68,8 +68,6 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       );
 
       newSocket.on("connect", () => {
-        console.log("Socket connected:", newSocket.id);
-
         // Send authentication data after connection
         newSocket.emit("authenticate", {
           id: user.id,

@@ -1,7 +1,8 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import CropProvider, { useCrop } from "@/providers/crop-provider.tsx";
+import CropProvider from "@/providers/crop-provider";
+import { useCrop } from "@/context/crop-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Edit,
@@ -165,36 +166,38 @@ const CropsManagement = () => {
   const [deleteDocumentLoading, setDeleteDocumentLoading] = useState(false);
 
   // Filter and sort functions
-  const filteredCropTypes = cropTypes.filter((type) =>
-    type.name.toLowerCase().includes(cropTypeSearchTerm.toLowerCase())
-  );
+  const filteredAndSortedCropTypes = useMemo(() => {
+    const filtered = cropTypes.filter((type) =>
+      (type.name || "").toLowerCase().includes(cropTypeSearchTerm.toLowerCase())
+    );
 
-  const filteredAndSortedCropTypes = filteredCropTypes.sort((a, b) => {
-    if (!cropTypeSortBy) return 0;
+    return filtered.sort((a, b) => {
+      if (!cropTypeSortBy) return 0;
 
-    let aValue: any = a;
-    let bValue: any = b;
+      let aValue: any = a;
+      let bValue: any = b;
 
-    if (cropTypeSortBy === "name") {
-      aValue = a.name;
-      bValue = b.name;
-    } else if (cropTypeSortBy === "cropsCount") {
-      aValue = a._count?.crops || 0;
-      bValue = b._count?.crops || 0;
-    } else if (cropTypeSortBy === "created_at") {
-      aValue = new Date(a.created_at);
-      bValue = new Date(b.created_at);
-    } else if (cropTypeSortBy === "updated_at") {
-      aValue = new Date(a.updated_at);
-      bValue = new Date(b.updated_at);
-    }
+      if (cropTypeSortBy === "name") {
+        aValue = a.name || "";
+        bValue = b.name || "";
+      } else if (cropTypeSortBy === "cropsCount") {
+        aValue = a._count?.crops || 0;
+        bValue = b._count?.crops || 0;
+      } else if (cropTypeSortBy === "created_at") {
+        aValue = new Date(a.created_at);
+        bValue = new Date(b.created_at);
+      } else if (cropTypeSortBy === "updated_at") {
+        aValue = new Date(a.updated_at);
+        bValue = new Date(b.updated_at);
+      }
 
-    if (cropTypeSortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+      if (cropTypeSortOrder === "asc") {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  }, [cropTypes, cropTypeSearchTerm, cropTypeSortBy, cropTypeSortOrder]);
 
   // Crop Types pagination logic
   const cropTypeTotalPages = Math.max(
@@ -203,96 +206,108 @@ const CropsManagement = () => {
   );
   const cropTypeStartIndex = (cropTypeCurrentPage - 1) * cropTypePageSize;
   const cropTypeEndIndex = cropTypeStartIndex + cropTypePageSize;
-  const paginatedCropTypes = filteredAndSortedCropTypes.slice(
-    cropTypeStartIndex,
-    cropTypeEndIndex
+  const paginatedCropTypes = useMemo(
+    () =>
+      filteredAndSortedCropTypes.slice(cropTypeStartIndex, cropTypeEndIndex),
+    [filteredAndSortedCropTypes, cropTypeStartIndex, cropTypeEndIndex]
   );
 
-  const filteredAndSortedCrops = crops
-    .filter((crop) => {
-      const matchesSearch = crop.name
-        .toLowerCase()
-        .includes(cropSearchTerm.toLowerCase());
-      const matchesType =
-        selectedCropType === "" ||
-        selectedCropType === "all" ||
-        crop.type_id === selectedCropType;
-      return matchesSearch && matchesType;
-    })
-    .sort((a, b) => {
-      if (!sortBy) return 0;
+  const filteredAndSortedCrops = useMemo(() => {
+    return crops
+      .filter((crop) => {
+        const matchesSearch = (crop.name || "")
+          .toLowerCase()
+          .includes(cropSearchTerm.toLowerCase());
+        const matchesType =
+          selectedCropType === "" ||
+          selectedCropType === "all" ||
+          crop.type_id === selectedCropType;
+        return matchesSearch && matchesType;
+      })
+      .sort((a, b) => {
+        if (!sortBy) return 0;
+
+        let aValue: any = a;
+        let bValue: any = b;
+
+        if (sortBy === "name") {
+          aValue = a.name || "";
+          bValue = b.name || "";
+        } else if (sortBy === "type") {
+          aValue = a.type?.name || "";
+          bValue = b.type?.name || "";
+        } else if (sortBy === "created_at") {
+          aValue = new Date(a.created_at);
+          bValue = new Date(b.created_at);
+        } else if (sortBy === "updated_at") {
+          aValue = new Date(a.updated_at);
+          bValue = new Date(b.updated_at);
+        }
+
+        if (sortOrder === "asc") {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
+  }, [crops, cropSearchTerm, selectedCropType, sortBy, sortOrder]);
+
+  const filteredAndSortedDocuments = useMemo(() => {
+    const filtered = documents.filter((doc) => {
+      const searchTerm = documentSearchTerm.toLowerCase();
+      const matchesSearch =
+        !documentSearchTerm ||
+        (doc.CropTypes?.name || "").toLowerCase().includes(searchTerm) ||
+        (doc.Crops?.name || "").toLowerCase().includes(searchTerm) ||
+        (doc.title || "").toLowerCase().includes(searchTerm);
+
+      const matchesCropType =
+        selectedDocumentCropType === "" ||
+        selectedDocumentCropType === "all" ||
+        doc.crop_type_id === selectedDocumentCropType;
+
+      const matchesCrop =
+        selectedDocumentCrop === "" ||
+        selectedDocumentCrop === "all" ||
+        doc.crop_id === selectedDocumentCrop;
+
+      return matchesSearch && matchesCropType && matchesCrop;
+    });
+
+    return filtered.sort((a, b) => {
+      if (!documentSortBy) return 0;
 
       let aValue: any = a;
       let bValue: any = b;
 
-      if (sortBy === "name") {
-        aValue = a.name;
-        bValue = b.name;
-      } else if (sortBy === "type") {
-        aValue = a.type?.name || "";
-        bValue = b.type?.name || "";
-      } else if (sortBy === "created_at") {
+      if (documentSortBy === "file") {
+        aValue = a.id;
+        bValue = b.id;
+      } else if (documentSortBy === "cropType") {
+        aValue = a.CropTypes?.name || "";
+        bValue = b.CropTypes?.name || "";
+      } else if (documentSortBy === "crop") {
+        aValue = a.Crops?.name || "";
+        bValue = b.Crops?.name || "";
+      } else if (documentSortBy === "created_at") {
         aValue = new Date(a.created_at);
         bValue = new Date(b.created_at);
-      } else if (sortBy === "updated_at") {
-        aValue = new Date(a.updated_at);
-        bValue = new Date(b.updated_at);
       }
 
-      if (sortOrder === "asc") {
+      if (documentSortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
       }
     });
-
-  const filteredDocuments = documents.filter((doc) => {
-    const searchTerm = documentSearchTerm.toLowerCase();
-    const matchesSearch =
-      !documentSearchTerm ||
-      doc.CropTypes?.name?.toLowerCase().includes(searchTerm) ||
-      doc.Crops?.name?.toLowerCase().includes(searchTerm) ||
-      doc.title?.toLowerCase().includes(searchTerm);
-
-    const matchesCropType =
-      selectedDocumentCropType === "" ||
-      selectedDocumentCropType === "all" ||
-      doc.crop_type_id === selectedDocumentCropType;
-
-    const matchesCrop =
-      selectedDocumentCrop === "" ||
-      selectedDocumentCrop === "all" ||
-      doc.crop_id === selectedDocumentCrop;
-
-    return matchesSearch && matchesCropType && matchesCrop;
-  });
-
-  const filteredAndSortedDocuments = filteredDocuments.sort((a, b) => {
-    if (!documentSortBy) return 0;
-
-    let aValue: any = a;
-    let bValue: any = b;
-
-    if (documentSortBy === "file") {
-      aValue = a.id;
-      bValue = b.id;
-    } else if (documentSortBy === "cropType") {
-      aValue = a.CropTypes?.name || "";
-      bValue = b.CropTypes?.name || "";
-    } else if (documentSortBy === "crop") {
-      aValue = a.Crops?.name || "";
-      bValue = b.Crops?.name || "";
-    } else if (documentSortBy === "created_at") {
-      aValue = new Date(a.created_at);
-      bValue = new Date(b.created_at);
-    }
-
-    if (documentSortOrder === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
+  }, [
+    documents,
+    documentSearchTerm,
+    selectedDocumentCropType,
+    selectedDocumentCrop,
+    documentSortBy,
+    documentSortOrder,
+  ]);
 
   // Document pagination logic
   const documentTotalPages = Math.max(
@@ -301,9 +316,10 @@ const CropsManagement = () => {
   );
   const documentStartIndex = (documentCurrentPage - 1) * documentPageSize;
   const documentEndIndex = documentStartIndex + documentPageSize;
-  const paginatedDocuments = filteredAndSortedDocuments.slice(
-    documentStartIndex,
-    documentEndIndex
+  const paginatedDocuments = useMemo(
+    () =>
+      filteredAndSortedDocuments.slice(documentStartIndex, documentEndIndex),
+    [filteredAndSortedDocuments, documentStartIndex, documentEndIndex]
   );
 
   // Pagination logic
@@ -313,7 +329,10 @@ const CropsManagement = () => {
   );
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const paginatedCrops = filteredAndSortedCrops.slice(startIndex, endIndex);
+  const paginatedCrops = useMemo(
+    () => filteredAndSortedCrops.slice(startIndex, endIndex),
+    [filteredAndSortedCrops, startIndex, endIndex]
+  );
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -366,7 +385,7 @@ const CropsManagement = () => {
     const formData = new FormData();
     formData.append("name", cropTypeFormData.name);
     if (cropTypeFormData.image) {
-      formData.append("file", cropTypeFormData.image);
+      formData.append("image_urls", cropTypeFormData.image);
     }
 
     const success = editingCropType
@@ -398,15 +417,21 @@ const CropsManagement = () => {
   const handleCropSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!cropFormData.name || !cropFormData.type_id || !cropFormData.image) {
+    if (!cropFormData.name || !cropFormData.type_id) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!editingCrop && !cropFormData.image) {
+      toast.error("Please select an image");
       return;
     }
 
     const formData = new FormData();
     formData.append("name", cropFormData.name);
-    formData.append("type_id", cropFormData.type_id);
+    formData.append("crop_type_id", cropFormData.type_id);
     if (cropFormData.image) {
-      formData.append("file", cropFormData.image);
+      formData.append("image_urls", cropFormData.image);
     }
 
     const success = editingCrop
@@ -994,7 +1019,7 @@ const CropsManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedCropTypes.map((cropType) => (
-                    <TableRow key={cropType.id}>
+                    <TableRow key={cropType.id || `crop-type-${Math.random()}`}>
                       <TableCell>
                         <Checkbox
                           checked={selectedCropTypes.includes(cropType.id)}
@@ -1339,7 +1364,7 @@ const CropsManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedCrops.map((crop) => (
-                    <TableRow key={crop.id}>
+                    <TableRow key={crop.id || `crop-${Math.random()}`}>
                       <TableCell>
                         <Checkbox
                           checked={selectedCrops.includes(crop.id)}
@@ -1781,7 +1806,7 @@ const CropsManagement = () => {
                   </TableRow>
                 ) : (
                   paginatedDocuments.map((doc) => (
-                    <TableRow key={doc.id}>
+                    <TableRow key={doc.id || `doc-${Math.random()}`}>
                       <TableCell>
                         <span className="font-medium">{doc.title}</span>
                       </TableCell>
@@ -1923,11 +1948,11 @@ const CropsManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Crop Type</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this crop type? This action cannot
+              be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            Are you sure you want to delete this crop type? This action cannot
-            be undone.
-          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -1962,11 +1987,11 @@ const CropsManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Crop</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this crop? This action cannot be
+              undone.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            Are you sure you want to delete this crop? This action cannot be
-            undone.
-          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -2001,11 +2026,11 @@ const CropsManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Document</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this document? This action cannot
+              be undone.
+            </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            Are you sure you want to delete this document? This action cannot be
-            undone.
-          </div>
           <DialogFooter>
             <Button
               variant="outline"

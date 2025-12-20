@@ -123,7 +123,7 @@ export class MachineController {
             const newImageUrls = files ? files.map((file) => file.path) : [];
             const image_urls = [...existingMachine!.image_urls, ...newImageUrls];
             
-            const updatedMachine = (await MachineService.updateMachine(id, machine_type_id, name, description, image_urls));
+            const updatedMachine = (await MachineService.updateMachine(id, machine_type_id, name, description, image_urls)).machine;
 
             res.status(200).json({ message: 'Machine updated successfully', data: updatedMachine });
             return;

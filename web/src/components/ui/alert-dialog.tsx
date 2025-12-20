@@ -30,6 +30,13 @@ function AlertDialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
+  // Fix: Ensure pointer-events are restored when overlay unmounts
+  React.useEffect(() => {
+    return () => {
+      document.body.style.pointerEvents = ""
+    }
+  }, [])
+
   return (
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
@@ -46,6 +53,18 @@ function AlertDialogContent({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+  // Fix: Ensure pointer-events are restored when alert dialog closes
+  React.useEffect(() => {
+    return () => {
+      // Immediate restore
+      document.body.style.pointerEvents = ""
+      // Delayed restore to handle animations
+      setTimeout(() => {
+        document.body.style.pointerEvents = ""
+      }, 500)
+    }
+  }, [])
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />

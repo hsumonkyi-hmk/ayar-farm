@@ -1,61 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 import type { MachineType, Machine, Document } from "@/lib/interface";
+import { MachineContext, type MachineContextType } from "@/context/machine-context";
 
-interface MachineContextType {
-  // Data
-  machineTypes: MachineType[];
-  machines: Machine[];
-  documents: Document[];
-
-  // Loading state
-  isLoading: boolean;
-  isUploadingFile: boolean;
-  error: string | null;
-
-  // Fetch functions
-  fetchMachineTypes: () => Promise<MachineType[]>;
-  fetchMachines: () => Promise<Machine[]>;
-  fetchDocuments: () => Promise<Document[]>;
-  refreshAll: () => Promise<void>;
-
-  // CRUD operations for Machine Types
-  createMachineType: (data: FormData) => Promise<boolean>;
-  updateMachineType: (id: string, data: FormData) => Promise<boolean>;
-  deleteMachineType: (id: string) => Promise<boolean>;
-  bulkDeleteMachineTypes: (ids: string[]) => Promise<boolean>;
-
-  // CRUD operations for Machines
-  createMachine: (data: FormData) => Promise<boolean>;
-  updateMachine: (id: string, data: FormData) => Promise<boolean>;
-  deleteMachine: (id: string) => Promise<boolean>;
-  bulkDeleteMachines: (ids: string[]) => Promise<boolean>;
-
-  // CRUD operations for Documents
-  createDocument: (data: FormData) => Promise<boolean>;
-  updateDocument: (id: string, data: FormData) => Promise<boolean>;
-  deleteDocument: (id: string) => Promise<boolean>;
-
-  // Utility functions
-  getMachineTypeById: (id: string) => MachineType | undefined;
-  getMachineById: (id: string) => Machine | undefined;
-  getDocumentById: (id: string) => Document | undefined;
-  getMachinesByType: (typeId: string) => Machine[];
-  getTotalMachineTypes: () => number;
-  getTotalMachines: () => number;
-  getTotalDocumentsCount: () => number;
-}
-
-const MachineContext = createContext<MachineContextType | undefined>(undefined);
-
-interface MachineProviderProps {
-  children: ReactNode;
-}
-
-export const MachineProvider: React.FC<MachineProviderProps> = ({
+export const MachineProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
@@ -68,15 +19,22 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const fetchMachineTypes = async (): Promise<MachineType[]> => {
     try {
       setError(null);
-      const response = await api.get("/machine/machine-types");
+      const response = await api.get("/agriindustry/machinetypes");
       const data = response.data;
 
-      if (data && typeof data === "object") {
-        const fetchedMachineTypes = data.machineTypes || [];
-        setMachineTypes(fetchedMachineTypes);
-        return fetchedMachineTypes;
+      if (Array.isArray(data)) {
+        setMachineTypes(data);
+        return data;
+      } else if (data && data.machineTypes) {
+        setMachineTypes(data.machineTypes);
+        return data.machineTypes;
       } else {
-        throw new Error("Invalid response format for machine types");
+        if (!data) {
+          setMachineTypes([]);
+          return [];
+        }
+        console.warn("Unexpected response format for machine types:", response);
+        return [];
       }
     } catch (error) {
       const errorMessage =
@@ -92,15 +50,22 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const fetchMachines = async (): Promise<Machine[]> => {
     try {
       setError(null);
-      const response = await api.get("/machine/machines");
+      const response = await api.get("/agriindustry/machines");
       const data = response.data;
 
-      if (data && typeof data === "object") {
-        const fetchedMachines = data.machines || [];
-        setMachines(fetchedMachines);
-        return fetchedMachines;
+      if (Array.isArray(data)) {
+        setMachines(data);
+        return data;
+      } else if (data && data.machines) {
+        setMachines(data.machines);
+        return data.machines;
       } else {
-        throw new Error("Invalid response format for machines");
+        if (!data) {
+          setMachines([]);
+          return [];
+        }
+        console.warn("Unexpected response format for machines:", response);
+        return [];
       }
     } catch (error) {
       const errorMessage =
@@ -117,14 +82,21 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
     try {
       setError(null);
       const response = await api.get("/document/documents");
-      const data = response.data;
+      const data = response.documents;
 
-      if (data && typeof data === "object") {
-        const fetchedDocuments = data.documents || [];
-        setDocuments(fetchedDocuments);
-        return fetchedDocuments;
+      if (Array.isArray(data)) {
+        setDocuments(data);
+        return data;
+      } else if (response.data && Array.isArray(response.data)) {
+        setDocuments(response.data);
+        return response.data;
       } else {
-        throw new Error("Invalid response format");
+        if (!data) {
+          setDocuments([]);
+          return [];
+        }
+        console.warn("Unexpected response format for documents:", response);
+        return [];
       }
     } catch (err) {
       const errorMessage =
@@ -168,14 +140,14 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       setIsUploadingFile(true);
       const token = localStorage.getItem("token");
       const response = await api.post(
-        "/machine/machine-types",
+        "/agriindustry/machinetypes",
         data,
         token || undefined
       );
 
       const result = response.data;
-      if (result && result.machineType) {
-        setMachineTypes((prev) => [...prev, result.machineType]);
+      if (result) {
+        setMachineTypes((prev) => [...prev, result]);
         toast.success("Machine type created successfully");
         return true;
       } else {
@@ -203,15 +175,15 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       setIsUploadingFile(true);
       const token = localStorage.getItem("token");
       const response = await api.put(
-        `/machine/machine-types/${id}`,
+        `/agriindustry/machinetypes/${id}`,
         data,
         token || undefined
       );
 
       const result = response.data;
-      if (result && result.machineType) {
+      if (result) {
         setMachineTypes((prev) =>
-          prev.map((type) => (type.id === id ? result.machineType : type))
+          prev.map((type) => (type.id === id ? result : type))
         );
         toast.success("Machine type updated successfully");
         return true;
@@ -234,7 +206,8 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
 
   const deleteMachineType = async (id: string): Promise<boolean> => {
     try {
-      await api.delete(`/machine/machine-types/${id}`);
+      const token = localStorage.getItem("token");
+      await api.delete(`/agriindustry/machinetypes/${id}`, token || undefined);
       setMachineTypes((prev) => prev.filter((type) => type.id !== id));
       toast.success("Machine type deleted successfully");
       return true;
@@ -257,7 +230,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       }
 
       const token = localStorage.getItem("token");
-      await api.delete("/machine/machine-types", token || undefined, { ids });
+      await api.delete("/agriindustry/machinetypes", token || undefined, { ids });
 
       setMachineTypes((prev) => prev.filter((type) => !ids.includes(type.id)));
       toast.success(`${ids.length} machine types deleted successfully`);
@@ -279,14 +252,14 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       setIsUploadingFile(true);
       const token = localStorage.getItem("token");
       const response = await api.post(
-        "/machine/machines",
+        "/agriindustry/machines",
         data,
         token || undefined
       );
 
       const result = response.data;
-      if (result && result.machine) {
-        setMachines((prev) => [...prev, result.machine]);
+      if (result) {
+        setMachines((prev) => [...prev, result]);
         toast.success("Machine created successfully");
         return true;
       } else {
@@ -312,15 +285,15 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       setIsUploadingFile(true);
       const token = localStorage.getItem("token");
       const response = await api.put(
-        `/machine/machines/${id}`,
+        `/agriindustry/machines/${id}`,
         data,
         token || undefined
       );
 
       const result = response.data;
-      if (result && result.machine) {
+      if (result) {
         setMachines((prev) =>
-          prev.map((machine) => (machine.id === id ? result.machine : machine))
+          prev.map((machine) => (machine.id === id ? result : machine))
         );
         toast.success("Machine updated successfully");
         return true;
@@ -341,7 +314,8 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
 
   const deleteMachine = async (id: string): Promise<boolean> => {
     try {
-      await api.delete(`/machine/machines/${id}`);
+      const token = localStorage.getItem("token");
+      await api.delete(`/agriindustry/machines/${id}`, token || undefined);
       setMachines((prev) => prev.filter((machine) => machine.id !== id));
       toast.success("Machine deleted successfully");
       return true;
@@ -362,7 +336,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       }
 
       const token = localStorage.getItem("token");
-      await api.delete("/machine/machines", token || undefined, { ids });
+      await api.delete("/agriindustry/machines", token || undefined, { ids });
 
       toast.success(`${ids.length} machines deleted successfully`);
       await fetchMachines();
@@ -530,14 +504,6 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   return (
     <MachineContext.Provider value={value}>{children}</MachineContext.Provider>
   );
-};
-
-export const useMachine = (): MachineContextType => {
-  const context = useContext(MachineContext);
-  if (!context) {
-    throw new Error("useMachine must be used within a MachineProvider");
-  }
-  return context;
 };
 
 export default MachineProvider;

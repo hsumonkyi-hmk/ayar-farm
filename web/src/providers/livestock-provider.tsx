@@ -1,67 +1,31 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
 import type { Livestock, Document } from "@/lib/interface";
+import { LivestockContext } from "@/context/livestock-context";
 
-interface LivestockContextType {
-  livestocks: Livestock[];
-  documents: Document[];
-
-  isLoading: boolean;
-  isUploadingFile: boolean;
-  error: string | null;
-
-  fetchLivestock: () => Promise<void>;
-  fetchDocuments: () => Promise<Document[]>;
-  refreshAll: () => Promise<void>;
-
-  createLivestock: (data: FormData) => Promise<boolean>;
-  updateLivestock: (id: string, data: FormData) => Promise<boolean>;
-  deleteLivestock: (id: string) => Promise<boolean>;
-  bulkDeleteLivestock: (ids: string[]) => Promise<boolean>;
-
-  createDocument: (data: FormData) => Promise<boolean>;
-  updateDocument: (id: string, data: FormData) => Promise<boolean>;
-  deleteDocument: (id: string) => Promise<boolean>;
-
-  getLivestockById: (id: string) => Livestock | undefined;
-  getDocumentById: (id: string) => Document | undefined;
-  getTotalLivestockCount: () => number;
-  getTotalDocumentsCount: () => number;
-}
-
-const LivestockContext = createContext<LivestockContextType | undefined>(
-  undefined
-);
-
-interface LivestockProviderProps {
-  children: ReactNode;
-}
-
-export const LivestockProvider: React.FC<LivestockProviderProps> = ({
-  children,
-}) => {
+const LivestockProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [livestocks, setLivestocks] = useState<Livestock[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isUploadingFile, setIsUploadingFile] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchLivestock = async () => {
+  const fetchLivestock = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/livestockindustry/livestocks");
-      setLivestocks(response.data);
+      setLivestocks(response.data || []);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const fetchDocuments = async (): Promise<Document[]> => {
+  const fetchDocuments = useCallback(async (): Promise<Document[]> => {
     try {
       setError(null);
       const response = await api.get("/document/documents?type=livestock");
@@ -77,9 +41,9 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
       console.error("Fetch documents error:", err);
       throw err;
     }
-  };
+  }, []);
 
-  const refreshAll = async () => {
+  const refreshAll = useCallback(async () => {
     setIsLoading(true);
     try {
       const results = await Promise.allSettled([
@@ -116,53 +80,62 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchLivestock, fetchDocuments, livestocks.length, documents.length]);
 
   // CRUD operations for Livestock
-  const createLivestock = async (data: FormData): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      await api.post("/livestockindustry/livestocks", data, token || undefined);
-      toast.success("Livestock created successfully!");
-      await fetchLivestock();
-      return true;
-    } catch (err: any) {
-      toast.error(
-        err.response?.data?.message || err.message || "Unknown error"
-      );
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const createLivestock = useCallback(
+    async (data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.post(
+          "/livestockindustry/livestocks",
+          data,
+          token || undefined
+        );
+        toast.success("Livestock created successfully!");
+        setLivestocks((prev) => [response.data, ...prev]);
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const updateLivestock = async (
-    id: string,
-    data: FormData
-  ): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      await api.put(
-        `/livestockindustry/livestocks/${id}`,
-        data,
-        token || undefined
-      );
-      toast.success("Livestock updated successfully!");
-      await fetchLivestock();
-      return true;
-    } catch (err: any) {
-      toast.error(
-        err.response?.data?.message || err.message || "Unknown error"
-      );
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const updateLivestock = useCallback(
+    async (id: string, data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.put(
+          `/livestockindustry/livestocks/${id}`,
+          data,
+          token || undefined
+        );
+        toast.success("Livestock updated successfully!");
+        setLivestocks((prev) =>
+          prev.map((item) => (item.id === id ? response.data : item))
+        );
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const deleteLivestock = async (id: string): Promise<boolean> => {
+  const deleteLivestock = useCallback(async (id: string): Promise<boolean> => {
     try {
       const token = localStorage.getItem("token");
       await api.delete(
@@ -170,7 +143,7 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
         token || undefined
       );
       toast.success("Livestock deleted successfully!");
-      await fetchLivestock();
+      setLivestocks((prev) => prev.filter((item) => item.id !== id));
       return true;
     } catch (err: any) {
       toast.error(
@@ -178,73 +151,89 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
       );
       return false;
     }
-  };
+  }, []);
 
-  const bulkDeleteLivestock = async (ids: string[]): Promise<boolean> => {
-    try {
-      const token = localStorage.getItem("token");
-      await api.post(
-        "/livestockindustry/livestocks/bulk-delete",
-        { ids },
-        token || undefined
-      );
-      toast.success("Selected livestock deleted successfully!");
-      await fetchLivestock();
-      return true;
-    } catch (err: any) {
-      toast.error(
-        err.response?.data?.message || err.message || "Unknown error"
-      );
-      return false;
-    }
-  };
+  const bulkDeleteLivestock = useCallback(
+    async (ids: string[]): Promise<boolean> => {
+      try {
+        const token = localStorage.getItem("token");
+        await api.post(
+          "/livestockindustry/livestocks/bulk-delete",
+          { ids },
+          token || undefined
+        );
+        toast.success("Selected livestock deleted successfully!");
+        setLivestocks((prev) => prev.filter((item) => !ids.includes(item.id)));
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      }
+    },
+    []
+  );
 
   // CRUD operations for Documents
-  const createDocument = async (data: FormData): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      await api.post("/document/documents", data, token || undefined);
-      toast.success("Document created successfully!");
-      await fetchDocuments();
-      return true;
-    } catch (err: any) {
-      toast.error(
-        err.response?.data?.message || err.message || "Unknown error"
-      );
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const createDocument = useCallback(
+    async (data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.post(
+          "/document/documents",
+          data,
+          token || undefined
+        );
+        toast.success("Document created successfully!");
+        setDocuments((prev) => [response.data, ...prev]);
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const updateDocument = async (
-    id: string,
-    data: FormData
-  ): Promise<boolean> => {
-    setIsUploadingFile(true);
-    try {
-      const token = localStorage.getItem("token");
-      await api.put(`/document/documents/${id}`, data, token || undefined);
-      toast.success("Document updated successfully!");
-      await fetchDocuments();
-      return true;
-    } catch (err: any) {
-      toast.error(
-        err.response?.data?.message || err.message || "Unknown error"
-      );
-      return false;
-    } finally {
-      setIsUploadingFile(false);
-    }
-  };
+  const updateDocument = useCallback(
+    async (id: string, data: FormData): Promise<boolean> => {
+      setIsUploadingFile(true);
+      try {
+        const token = localStorage.getItem("token");
+        const response = await api.put(
+          `/document/documents/${id}`,
+          data,
+          token || undefined
+        );
+        toast.success("Document updated successfully!");
+        setDocuments((prev) =>
+          prev.map((item) => (item.id === id ? response.data : item))
+        );
+        return true;
+      } catch (err: any) {
+        toast.error(
+          err.response?.data?.message || err.message || "Unknown error"
+        );
+        return false;
+      } finally {
+        setIsUploadingFile(false);
+      }
+    },
+    []
+  );
 
-  const deleteDocument = async (id: string): Promise<boolean> => {
+  const deleteDocument = useCallback(async (id: string): Promise<boolean> => {
     try {
       const token = localStorage.getItem("token");
       await api.delete(`/document/documents/${id}`, token || undefined);
       toast.success("Document deleted successfully!");
-      await fetchDocuments();
+      setDocuments((prev) => prev.filter((item) => item.id !== id));
       return true;
     } catch (err: any) {
       toast.error(
@@ -252,55 +241,82 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
       );
       return false;
     }
-  };
+  }, []);
 
-  const getLivestockById = (id: string) => livestocks.find((l) => l.id === id);
+  const getLivestockById = useCallback(
+    (id: string) => livestocks.find((l) => l.id === id),
+    [livestocks]
+  );
 
-  const getDocumentById = (id: string) => documents.find((d) => d.id === id);
+  const getDocumentById = useCallback(
+    (id: string) => documents.find((d) => d.id === id),
+    [documents]
+  );
 
-  const getTotalLivestockCount = () => livestocks.length;
-  const getTotalDocumentsCount = () => documents.length;
+  const getTotalLivestockCount = useCallback(
+    () => livestocks.length,
+    [livestocks]
+  );
+  const getTotalDocumentsCount = useCallback(
+    () => documents.length,
+    [documents]
+  );
 
   useEffect(() => {
     fetchLivestock();
     fetchDocuments();
   }, []);
 
+  const value = useMemo(
+    () => ({
+      livestocks,
+      documents,
+      isLoading,
+      isUploadingFile,
+      error,
+      fetchLivestock,
+      fetchDocuments,
+      refreshAll,
+      createLivestock,
+      updateLivestock,
+      deleteLivestock,
+      bulkDeleteLivestock,
+      createDocument,
+      updateDocument,
+      deleteDocument,
+      getLivestockById,
+      getDocumentById,
+      getTotalLivestockCount,
+      getTotalDocumentsCount,
+    }),
+    [
+      livestocks,
+      documents,
+      isLoading,
+      isUploadingFile,
+      error,
+      fetchLivestock,
+      fetchDocuments,
+      refreshAll,
+      createLivestock,
+      updateLivestock,
+      deleteLivestock,
+      bulkDeleteLivestock,
+      createDocument,
+      updateDocument,
+      deleteDocument,
+      getLivestockById,
+      getDocumentById,
+      getTotalLivestockCount,
+      getTotalDocumentsCount,
+    ]
+  );
+
   return (
-    <LivestockContext.Provider
-      value={{
-        livestocks,
-        documents,
-        isLoading,
-        isUploadingFile,
-        error,
-        fetchLivestock,
-        fetchDocuments,
-        refreshAll,
-        createLivestock,
-        updateLivestock,
-        deleteLivestock,
-        bulkDeleteLivestock,
-        createDocument,
-        updateDocument,
-        deleteDocument,
-        getLivestockById,
-        getDocumentById,
-        getTotalLivestockCount,
-        getTotalDocumentsCount,
-      }}
-    >
+    <LivestockContext.Provider value={value}>
       {children}
     </LivestockContext.Provider>
   );
-};
-
-export const useLivestock = () => {
-  const context = useContext(LivestockContext);
-  if (context === undefined) {
-    throw new Error("useLivestock must be used within a LivestockProvider");
-  }
-  return context;
 };
 
 export default LivestockProvider;
