@@ -5,6 +5,7 @@ import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/providers/auth-provider.tsx";
 import LoadingSpinner from "@/components/LoadingSpinner.tsx";
 import { AdminProvider, useAdmin } from "@/providers/admin-provider";
+import { useSocket } from "@/providers/socket-provider";
 import { useState, useMemo, useEffect } from "react";
 import {
   Card,
@@ -86,6 +87,7 @@ const UsersManagement = () => {
     getUnverifiedUsers,
     getUsersByType,
   } = useAdmin();
+  const { onlineUsers } = useSocket();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("all");
@@ -680,7 +682,13 @@ const UsersManagement = () => {
                     </div>
                   </div>
 
-                  <div className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded font-mono">
+                  <div
+                    className={`text-xs px-2 py-1 rounded font-mono ${
+                      onlineUsers.includes(user.id)
+                        ? "text-green-600 bg-green-100 font-bold"
+                        : "text-gray-400 bg-gray-100"
+                    }`}
+                  >
                     ID: {user.id.slice(0, 8)}...
                   </div>
                 </div>
@@ -747,7 +755,13 @@ const UsersManagement = () => {
                           </div>
                         </div>
 
-                        <div className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded font-mono">
+                        <div
+                          className={`text-xs px-2 py-1 rounded font-mono ${
+                            onlineUsers.includes(user.id)
+                              ? "text-green-600 bg-green-100 font-bold"
+                              : "text-gray-400 bg-gray-50"
+                          }`}
+                        >
                           ID: {user.id.slice(0, 8)}...
                         </div>
                       </div>

@@ -5,6 +5,7 @@ import { useAuth } from "./auth-provider";
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
+  onlineUsers: string[];
   joinGroup: (groupId: string) => void;
   leaveGroup: (groupId: string) => void;
   sendMessage: (
@@ -47,6 +48,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -77,6 +79,24 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         });
 
         setIsConnected(true);
+
+        // Request initial online users list
+        newSocket.emit("get-online-users");
+      });
+
+      newSocket.on("online-users", (users: string[]) => {
+        setOnlineUsers(users);
+      });
+
+      newSocket.on("user-online", (userId: string) => {
+        setOnlineUsers((prev) => {
+          if (!prev.includes(userId)) return [...prev, userId];
+          return prev;
+        });
+      });
+
+      newSocket.on("user-offline", (userId: string) => {
+        setOnlineUsers((prev) => prev.filter((id) => id !== userId));
       });
 
       newSocket.on("disconnect", () => {
@@ -192,6 +212,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const value: SocketContextType = {
     socket,
     isConnected,
+    onlineUsers,
     joinGroup,
     leaveGroup,
     sendMessage,
