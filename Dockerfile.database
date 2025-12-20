@@ -1,0 +1,9 @@
+FROM postgres:17
+
+# Set default environment variables (can be overridden at runtime)
+ENV POSTGRES_USER=neondb_owner
+ENV POSTGRES_PASSWORD=npg_JkScHG46TZVD
+ENV POSTGRES_DB=ayar_farm_db
+
+# Expose the PostgreSQL port
+EXPOSE 5432
