@@ -40,11 +40,7 @@ class AuthService {
     String? email,
     required String code,
   }) async {
-    final data = {
-      'phone_number': phoneNumber,
-      'email': email,
-      'code': code,
-    };
+    final data = {'phone_number': phoneNumber, 'email': email, 'code': code};
     final response = await ApiService.post(ApiConstants.verify, data);
     return AuthResponse.fromJson(response);
   }
@@ -53,11 +49,31 @@ class AuthService {
     String? phoneNumber,
     String? email,
   }) async {
+    final data = {'phone_number': phoneNumber, 'email': email};
+    return await ApiService.post(ApiConstants.resendOtp, data);
+  }
+
+  static Future<Map<String, dynamic>> requestPasswordReset({
+    String? phoneNumber,
+    String? email,
+  }) async {
+    final data = {'phone_number': phoneNumber, 'email': email};
+    return await ApiService.post(ApiConstants.forgotPassword, data);
+  }
+
+  static Future<Map<String, dynamic>> resetPassword({
+    String? phoneNumber,
+    String? email,
+    required String code,
+    required String newPassword,
+  }) async {
     final data = {
       'phone_number': phoneNumber,
       'email': email,
+      'code': code,
+      'new_password': newPassword,
     };
-    return await ApiService.post(ApiConstants.resendOtp, data);
+    return await ApiService.post(ApiConstants.resetPassword, data);
   }
 
   static Future<AuthResponse> updateAccount(Map<String, dynamic> data) async {

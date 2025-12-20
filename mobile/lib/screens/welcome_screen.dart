@@ -1,150 +1,232 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../widgets/ui/feature_card.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Colors from the design
+    const primaryColor = Color(0xFF2BEE5B);
+    final backgroundColor =
+        isDark ? const Color(0xFF102215) : const Color(0xFFF6F8F6);
+    final surfaceColor =
+        isDark ? const Color(0xFF1A2C1E) : const Color(0xFFFFFFFF);
+    final textColor = isDark ? Colors.white : const Color(0xFF111813);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FCF8),
-      body: Stack(
+      backgroundColor: backgroundColor,
+      body: Column(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(
-                  'https://lh3.googleusercontent.com/aida-public/AB6AXuCY5WjMqXrq0OmpGtQm0woMmpsuN1K6F3Dzdd7boSde59GLC7E2nxr08m0jtOQxDFiu8WP18rtW-2KcZik2SQoIY4jPbpK4LDky2zHw8c9FM3HXqmVYr_5JVqOu3G4M--4UoolsHi7TNYEWmD7fAklrQ3iMAX_EnhbRCctlPMpJebMrPacS7b2OaS6ectkNA4tACuKEdFN_-heRFOslZ41u5s4RKHDcTjJZWimHXwoK1D9sOmJNzKaFd_UqxwZoh6WUTpTG5MiBrlA',
-                ),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
-            child: Container(color: Colors.black.withOpacity(0)),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      RichText(
-                        textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Ayar Farm\n',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                height: 1.4,
-                              ),
-                            ),
-                            TextSpan(
-                              text: 'Cultivating\nConnections',
-                              style: TextStyle(
-                                color: Color(0xFF0d1b0f),
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900,
-                                height: 1.2,
-                              ),
-                            ),
-                          ],
-                        ),
+          // Hero Section with Image and Floating Logo
+          SizedBox(
+            height: size.height * 0.55 + 40, // Image height + half logo height
+            child: Stack(
+              alignment: Alignment.topCenter,
+              clipBehavior: Clip.none,
+              children: [
+                // Image with rounded bottom
+                Container(
+                  height: size.height * 0.55,
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(40),
+                    ),
+                    image: DecorationImage(
+                      image: NetworkImage(
+                        'https://lh3.googleusercontent.com/aida-public/AB6AXuDO6qIELRy3sw78iW5seCwfPUID7URfllDLqponXq3USYNZwXhdzLJqnvy8ZEuEQe87kwqqWMl-uNBQov7NV47h3s2yGNAWCaJe_Ix6yr0Cb0RSyMqU7pmvbT8Ucc7DUaG4vOgDwNi44CAY30QYM9d4P3kGaq08l9AGfdx2OzEl2oQ6a4In0LIbHoYGFgWy8NQ5zoD-2h8qmK4Bs6qqFaLcPncmS6ttM7HXjhI_jZklL0ajUMKBLkXECWSjiPVCtv1AVMYFt3rWez_h',
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Share your progress, exchange knowledge, and read the latest agricultural news.',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                          height: 1.4,
-                        ),
-                        textAlign: TextAlign.center,
+                      fit: BoxFit.cover,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 20,
+                        offset: Offset(0, 10),
                       ),
-                      const SizedBox(height: 40),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FeatureCard(
-                          icon: Icons.camera_alt,
-                          title: 'Post Updates',
-                          subtitle: 'Share from your farm',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FeatureCard(
-                          icon: Icons.forum,
-                          title: 'Connect & Chat',
-                          subtitle: 'Exchange knowledge',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FeatureCard(
-                          icon: Icons.article,
-                          title: 'Learn & Grow',
-                          subtitle: 'Read the latest blogs',
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/register');
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4c9a52),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, '/login');
-                        },
-                        child: RichText(
-                          text: TextSpan(
-                            text: 'Already have an account? ',
-                            style: TextStyle(color: Colors.white, fontSize: 18),
-                            children: const [
-                              TextSpan(
-                                text: 'Log In',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
                     ],
                   ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(40),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.1),
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.2),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
+                // Floating Logo
+                Positioned(
+                  bottom: 0,
+                  child: Transform.rotate(
+                    angle: 3 * 3.14159 / 180, // 3 degrees
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryColor.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.spa,
+                        size: 40,
+                        color: Color(0xFF111813),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Text Content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  const SizedBox(height: 24),
+                  Text(
+                    'Ayar Farm Link',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Cultivate Knowledge.\nGrow Together.',
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.7),
+                      fontSize: 18,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const Spacer(),
+
+                  // Buttons
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/register');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: const Color(0xFF111813),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        shadowColor: primaryColor.withOpacity(0.25),
+                      ).copyWith(elevation: WidgetStateProperty.all(8)),
+                      child: const Text(
+                        'Create New Account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/login');
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            isDark
+                                ? surfaceColor.withOpacity(0.5)
+                                : surfaceColor,
+                        foregroundColor: textColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side:
+                              isDark
+                                  ? BorderSide(
+                                    color: Colors.white.withOpacity(0.1),
+                                  )
+                                  : BorderSide.none,
+                        ),
+                      ),
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Footer
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24, bottom: 40),
+                    child: RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: TextStyle(
+                          color: textColor.withOpacity(0.4),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          fontFamily: theme.textTheme.bodyMedium?.fontFamily,
+                        ),
+                        children: [
+                          const TextSpan(text: 'By joining, you agree to our '),
+                          TextSpan(
+                            text: 'Terms of Service',
+                            style: TextStyle(
+                              decoration: TextDecoration.underline,
+                              decorationColor: primaryColor.withOpacity(0.5),
+                            ),
+                          ),
+                          const TextSpan(text: ' and '),
+                          TextSpan(
+                            text: 'Privacy Policy',
+                            style: TextStyle(
+                              decoration: TextDecoration.underline,
+                              decorationColor: primaryColor.withOpacity(0.5),
+                            ),
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

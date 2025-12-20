@@ -11,7 +11,10 @@ class VerifyScreen extends StatefulWidget {
 }
 
 class _VerifyScreenState extends State<VerifyScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
 
@@ -30,11 +33,12 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
   Future<void> _handleVerify() async {
     if (_code.length != 6) return;
-    
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final phoneNumber = args?['phoneNumber'] as String?;
     final email = args?['email'] as String?;
-    
+
     setState(() => _isLoading = true);
     try {
       final response = await AuthService.verify(
@@ -51,9 +55,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Verification failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Verification failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -61,10 +65,11 @@ class _VerifyScreenState extends State<VerifyScreen> {
   }
 
   Future<void> _handleResend() async {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final phoneNumber = args?['phoneNumber'] as String?;
     final email = args?['email'] as String?;
-    
+
     try {
       await AuthService.resendOTP(phoneNumber: phoneNumber, email: email);
       if (mounted) {
@@ -74,61 +79,200 @@ class _VerifyScreenState extends State<VerifyScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to resend OTP: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to resend OTP: $e')));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final identifier = args?['email'] ?? args?['phoneNumber'] ?? 'your account';
+
+    // Colors
+    const primaryColor = Color(0xFF2BEE5B);
+    final backgroundColor =
+        isDark ? const Color(0xFF102215) : const Color(0xFFF6F8F6);
+    final textColor = isDark ? Colors.white : const Color(0xFF111813);
+    final subTextColor = isDark ? Colors.grey[400] : Colors.grey[500];
+    final inputBoxColor = isDark ? Colors.grey[800] : Colors.white;
+    final borderColor = isDark ? Colors.grey[600] : Colors.grey[300];
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color:
+                          isDark
+                              ? Colors.white.withOpacity(0.1)
+                              : Colors.black.withOpacity(0.05),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 20,
+                        color: textColor,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildDot(false, isDark),
+                        const SizedBox(width: 8),
+                        _buildDot(true, isDark),
+                        const SizedBox(width: 8),
+                        _buildDot(false, isDark),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 40), // Balance
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      'Enter verification code',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    const SizedBox(height: 32),
+                    // Hero Icon
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 96,
+                          height: 96,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomLeft,
+                              end: Alignment.topRight,
+                              colors: [
+                                primaryColor.withOpacity(isDark ? 0.05 : 0.1),
+                                primaryColor.withOpacity(isDark ? 0.2 : 0.3),
+                              ],
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.lock_open,
+                            size: 48,
+                            color:
+                                isDark ? primaryColor : const Color(0xFF1A8F36),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: backgroundColor,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.eco,
+                              size: 24,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Headline
+                    Text(
+                      "Verify it's you",
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Builder(
-                      builder: (context) {
-                        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-                        final identifier = args?['email'] ?? args?['phoneNumber'] ?? '';
-                        return Text(
-                          'We sent a 6-digit code to $identifier',
-                          style: TextStyle(color: Colors.grey[600]),
-                          textAlign: TextAlign.center,
-                        );
-                      },
+                    Text(
+                      'Enter the 6-digit code sent to',
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
+                    Text(
+                      identifier,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
                     const SizedBox(height: 32),
+
+                    // OTP Fields
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(6, (index) {
                         return SizedBox(
-                          width: 45,
+                          width: 44,
+                          height: 56,
                           child: TextField(
                             controller: _controllers[index],
                             focusNode: _focusNodes[index],
                             textAlign: TextAlign.center,
                             keyboardType: TextInputType.number,
                             maxLength: 1,
-                            decoration: const InputDecoration(
-                              counterText: '',
-                              border: OutlineInputBorder(),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
                             ),
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            decoration: InputDecoration(
+                              counterText: '',
+                              filled: true,
+                              fillColor: inputBoxColor,
+                              contentPadding: EdgeInsets.zero,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: borderColor!),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(
+                                  color: primaryColor,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             onChanged: (value) {
                               if (value.isNotEmpty && index < 5) {
                                 _focusNodes[index + 1].requestFocus();
@@ -140,61 +284,110 @@ class _VerifyScreenState extends State<VerifyScreen> {
                         );
                       }),
                     ),
-                    const SizedBox(height: 8),
-                    Builder(
-                      builder: (context) {
-                        final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-                        final type = args?['email'] != null ? 'email' : 'phone';
-                        return Text(
-                          'Enter the 6-digit code sent to your $type.',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                        );
-                      },
+
+                    const SizedBox(height: 32),
+
+                    // Resend
+                    Text(
+                      "Didn't receive the code?",
+                      style: TextStyle(
+                        color: subTextColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: _handleResend,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Resend Code',
+                            style: TextStyle(
+                              color:
+                                  isDark
+                                      ? primaryColor
+                                      : const Color(0xFF1A8F36),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 48),
+
+                    // Action Button
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 56,
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _handleVerify,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF41BE02),
+                          backgroundColor: primaryColor,
+                          foregroundColor: const Color(0xFF102215),
+                          elevation: 4,
+                          shadowColor: primaryColor.withOpacity(0.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Verify', style: TextStyle(fontSize: 16)),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: _handleResend,
-                      child: Text.rich(
-                        TextSpan(
-                          text: "Didn't receive the code? ",
-                          style: TextStyle(color: Colors.grey[600]),
-                          children: const [
-                            TextSpan(
-                              text: 'Resend',
-                              style: TextStyle(
-                                color: Color(0xFF41BE02),
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ],
-                        ),
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Text(
+                                      'Confirm & Continue',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward),
+                                  ],
+                                ),
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDot(bool isActive, bool isDark) {
+    return Container(
+      width: isActive ? 24 : 6,
+      height: 6,
+      decoration: BoxDecoration(
+        color:
+            isActive
+                ? const Color(0xFF2BEE5B)
+                : (isDark ? Colors.grey[600] : const Color(0xFFDBE6DE)),
+        borderRadius: BorderRadius.circular(3),
+        boxShadow:
+            isActive
+                ? [
+                  BoxShadow(
+                    color: const Color(0xFF2BEE5B).withOpacity(0.3),
+                    blurRadius: 10,
+                  ),
+                ]
+                : null,
       ),
     );
   }
