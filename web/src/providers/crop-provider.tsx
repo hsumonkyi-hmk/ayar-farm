@@ -3,7 +3,6 @@ import type { Crop, CropType, Document } from "@/lib/interface";
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-import { useAuth } from "./auth-provider";
 
 interface CropContextType {
   // Data

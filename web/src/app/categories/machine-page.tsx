@@ -138,7 +138,6 @@ const MachinesManagement = () => {
     title: "",
     author: "",
     pdfFile: null as File | null,
-    machine_model_number: "",
   });
   const [documentSortBy, setDocumentSortBy] = useState<string>("");
   const [documentSortOrder, setDocumentSortOrder] = useState<"asc" | "desc">(
@@ -243,8 +242,8 @@ const MachinesManagement = () => {
   const filteredDocuments = documents.filter((doc) => {
     const searchTerm = documentSearchTerm.toLowerCase();
     const matchesSearch =
-      doc.machine_type?.name.toLowerCase().includes(searchTerm) ||
-      doc.machines?.name.toLowerCase().includes(searchTerm) ||
+      doc.MachineTypes?.name.toLowerCase().includes(searchTerm) ||
+      doc.Machines?.name.toLowerCase().includes(searchTerm) ||
       doc.title.toLowerCase().includes(searchTerm);
 
     const matchesMachineType =
@@ -274,14 +273,14 @@ const MachinesManagement = () => {
       aValue = a.author;
       bValue = b.author;
     } else if (documentSortBy === "file_url") {
-      aValue = a.file_url;
-      bValue = b.file_url;
+      aValue = a.file_urls?.[0] || "";
+      bValue = b.file_urls?.[0] || "";
     } else if (documentSortBy === "machineType") {
-      aValue = a.machine_type?.name || "";
-      bValue = b.machine_type?.name || "";
+      aValue = a.MachineTypes?.name || "";
+      bValue = b.MachineTypes?.name || "";
     } else if (documentSortBy === "machine") {
-      aValue = a.machines?.name || "";
-      bValue = b.machines?.name || "";
+      aValue = a.Machines?.name || "";
+      bValue = b.Machines?.name || "";
     } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);
@@ -433,12 +432,6 @@ const MachinesManagement = () => {
     if (documentFormData.machine_id) {
       formData.append("machine_id", documentFormData.machine_id);
     }
-    if (documentFormData.machine_model_number) {
-      formData.append(
-        "machine_model_number",
-        documentFormData.machine_model_number
-      );
-    }
     formData.append("title", documentFormData.title);
     formData.append("author", documentFormData.author);
     if (documentFormData.pdfFile) {
@@ -484,7 +477,6 @@ const MachinesManagement = () => {
     setDocumentFormData({
       machine_type_id: "",
       machine_id: "",
-      machine_model_number: "",
       title: "",
       author: "",
       pdfFile: null,
@@ -518,7 +510,6 @@ const MachinesManagement = () => {
     setDocumentFormData({
       machine_type_id: doc.machine_type_id || "",
       machine_id: doc.machine_id || "",
-      machine_model_number: doc.machine_model_number || "",
       title: doc.title || "",
       author: doc.author || "",
       pdfFile: null,
@@ -784,12 +775,12 @@ const MachinesManagement = () => {
                     [
                       ...new Set(
                         documents
-                          .map((doc) => doc.machine_model_number)
+                          .map((doc) => doc.machine_id)
                           .filter((id) => id !== null)
                       ),
                     ].length
                   }{" "}
-                  Model(s) Linked
+                  Machine(s) Linked
                 </span>
                 <div className="flex items-center space-x-1 text-violet-600">
                   <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
@@ -1678,60 +1669,6 @@ const MachinesManagement = () => {
                         </Select>
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
-                        <Label
-                          htmlFor="documentMachineModel"
-                          className="text-right"
-                        >
-                          Model Number
-                        </Label>
-                        <Select
-                          value={documentFormData.machine_model_number}
-                          onValueChange={(value) =>
-                            setDocumentFormData({
-                              ...documentFormData,
-                              machine_model_number: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Select model number (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
-                            {(() => {
-                              // Find the name of the selected machine
-                              const selectedMachineName = machines.find(
-                                (m) => m.id === documentFormData.machine_id
-                              )?.name;
-
-                              // Filter machines by the selected name
-                              const filteredMachines = machines.filter((m) =>
-                                selectedMachineName
-                                  ? m.name === selectedMachineName
-                                  : true
-                              );
-
-                              // Get unique model numbers from the filtered list
-                              return Array.from(
-                                new Map(
-                                  filteredMachines.map((machine) => [
-                                    machine.model_number,
-                                    machine,
-                                  ])
-                                ).values()
-                              ).map((machine) => (
-                                <SelectItem
-                                  key={machine.id}
-                                  value={machine.model_number}
-                                >
-                                  {machine.model_number} ({machine.name})
-                                </SelectItem>
-                              ));
-                            })()}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="documentTitle" className="text-right">
                           Title
                         </Label>
@@ -1870,15 +1807,6 @@ const MachinesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortDocument("machine")}
-                  >
-                    <div className="flex items-center">
-                      Model Number
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer"
                     onClick={() => handleSortDocument("created_at")}
                   >
                     <div className="flex items-center">
@@ -1913,7 +1841,7 @@ const MachinesManagement = () => {
                         <div className="flex items-center">
                           <FileText className="h-4 w-4 mr-2 text-red-600" />
                           <a
-                            href={doc.file_url}
+                            href={doc.file_urls?.[0]}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
@@ -1923,38 +1851,27 @@ const MachinesManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {doc.machine_type ? (
+                        {doc.MachineTypes ? (
                           <Badge
                             variant="secondary"
                             className="bg-green-600/10 text-green-600"
                           >
                             <Tag className="h-4 w-4 mr-1" />
-                            {doc.machine_type.name}
+                            {doc.MachineTypes.name}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {doc.machines?.name ? (
+                        {doc.Machines?.name ? (
                           <div className="flex justify-start items-center gap-2">
                             <Badge
                               variant="secondary"
                               className="bg-green-600/10 text-green-600"
                             >
                               <Tag className="h-4 w-4 mr-1" />
-                              {doc.machines.name}
-                            </Badge>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {doc.machine_model_number ? (
-                          <div className="flex justify-start items-center gap-2">
-                            <Badge variant="outline">
-                              {doc.machine_model_number}
+                              {doc.Machines.name}
                             </Badge>
                           </div>
                         ) : (
@@ -2173,10 +2090,12 @@ const AdminMachinePage = () => {
   return (
     <MachineProvider>
       <SidebarProvider
-        style={{
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        }}
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties & { [key: string]: string }
+        }
       >
         <AppSidebar variant="inset" />
         <SidebarInset>

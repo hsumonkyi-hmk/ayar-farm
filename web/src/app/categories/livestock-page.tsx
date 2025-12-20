@@ -178,7 +178,7 @@ const LivestockManagement = () => {
   const documentsWithLivestock = documents.map((doc) => ({
     ...doc,
     livestocks:
-      doc.livestocks || livestocks.find((l) => l.id === doc.livestock_id),
+      doc.Livestocks || livestocks.find((l) => l.id === doc.livestock_id),
   }));
 
   // Filter and sort functions for Document (only show those with livestock_id)

@@ -170,7 +170,7 @@ const FisheriesManagement = () => {
 
   const documentsWithFishery = documents.map((doc) => ({
     ...doc,
-    fish: doc.fish || fisheries.find((l) => l.id === doc.fish_id),
+    Fisheries: doc.Fisheries || fisheries.find((l) => l.id === doc.fish_id),
   }));
 
   // Filter and sort functions for Document (only show those with fish_id)
@@ -179,7 +179,7 @@ const FisheriesManagement = () => {
     .filter((doc) => {
       const searchTerm = documentSearchTerm.toLowerCase();
       const matchesSearch =
-        doc.fish?.name?.toLowerCase().includes(searchTerm) ||
+        doc.Fisheries?.name?.toLowerCase().includes(searchTerm) ||
         doc.title?.toLowerCase().includes(searchTerm) ||
         doc.author?.toLowerCase().includes(searchTerm);
 
@@ -204,8 +204,8 @@ const FisheriesManagement = () => {
       aValue = a.author;
       bValue = b.author;
     } else if (documentSortBy === "fishery") {
-      aValue = a.fish?.name || "";
-      bValue = b.fish?.name || "";
+      aValue = a.Fisheries?.name || "";
+      bValue = b.Fisheries?.name || "";
     } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);
@@ -856,14 +856,14 @@ const FisheriesManagement = () => {
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search IFS documents..."
-                  value={ifsSearchTerm}
-                  onChange={(e) => setIfsSearchTerm(e.target.value)}
+                  value={documentSearchTerm}
+                  onChange={(e) => setDocumentSearchTerm(e.target.value)}
                   className="pl-8 w-full sm:w-[250px]"
                 />
               </div>
               <Select
-                value={selectedIfsFishery}
-                onValueChange={setSelectedIfsFishery}
+                value={selectedDocumentFishery}
+                onValueChange={setSelectedDocumentFishery}
               >
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <SelectValue placeholder="Filter by fishery" />
@@ -879,9 +879,12 @@ const FisheriesManagement = () => {
               </Select>
             </div>
             <div className="flex gap-2 items-center">
-              <Dialog open={isIfsDialogOpen} onOpenChange={setIsIfsDialogOpen}>
+              <Dialog
+                open={isDocumentDialogOpen}
+                onOpenChange={setIsDocumentDialogOpen}
+              >
                 <DialogTrigger asChild>
-                  <Button onClick={() => setEditingIfs(null)}>
+                  <Button onClick={() => setEditingDocument(null)}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add IFS Document
                   </Button>
@@ -889,28 +892,28 @@ const FisheriesManagement = () => {
                 <DialogContent className="sm:max-w-[500px]">
                   <DialogHeader>
                     <DialogTitle>
-                      {editingIfs
+                      {editingDocument
                         ? "Edit IFS Document"
                         : "Add New IFS Document"}
                     </DialogTitle>
                     <DialogDescription>
-                      {editingIfs
+                      {editingDocument
                         ? "Update IFS document information"
                         : "Create a new IFS document"}
                     </DialogDescription>
                   </DialogHeader>
-                  <form onSubmit={handleIfsSubmit}>
+                  <form onSubmit={handleDocumentSubmit}>
                     <div className="grid gap-4 py-4">
                       <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="ifsFishery" className="text-right">
                           Fishery
                         </Label>
                         <Select
-                          value={ifsFormData.fishery_id}
+                          value={documentFormData.fish_id}
                           onValueChange={(value) =>
-                            setIfsFormData({
-                              ...ifsFormData,
-                              fishery_id: value,
+                            setDocumentFormData({
+                              ...documentFormData,
+                              fish_id: value,
                             })
                           }
                         >
@@ -933,10 +936,10 @@ const FisheriesManagement = () => {
                         </Label>
                         <Input
                           id="ifsTitle"
-                          value={ifsFormData.title}
+                          value={documentFormData.title}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               title: e.target.value,
                             })
                           }
@@ -951,10 +954,10 @@ const FisheriesManagement = () => {
                         </Label>
                         <Input
                           id="ifsAuthor"
-                          value={ifsFormData.author}
+                          value={documentFormData.author}
                           onChange={(e) =>
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               author: e.target.value,
                             })
                           }
@@ -973,8 +976,8 @@ const FisheriesManagement = () => {
                           accept="application/pdf"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            setIfsFormData({
-                              ...ifsFormData,
+                            setDocumentFormData({
+                              ...documentFormData,
                               pdfFile: file || null,
                             });
                           }}
@@ -986,7 +989,7 @@ const FisheriesManagement = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={handleIfsDialogClose}
+                        onClick={handleDocumentDialogClose}
                       >
                         Cancel
                       </Button>
@@ -994,9 +997,9 @@ const FisheriesManagement = () => {
                         {isUploadingFile ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {editingIfs ? "Updating..." : "Creating..."}
+                            {editingDocument ? "Updating..." : "Creating..."}
                           </>
-                        ) : editingIfs ? (
+                        ) : editingDocument ? (
                           "Update"
                         ) : (
                           "Create"
@@ -1015,7 +1018,7 @@ const FisheriesManagement = () => {
                 <TableRow>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("title")}
+                    onClick={() => handleSortDocument("title")}
                   >
                     <div className="flex items-center">
                       Title
@@ -1024,7 +1027,7 @@ const FisheriesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("author")}
+                    onClick={() => handleSortDocument("author")}
                   >
                     <div className="flex items-center">
                       Author
@@ -1034,7 +1037,7 @@ const FisheriesManagement = () => {
                   <TableHead>PDF File</TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("fishery")}
+                    onClick={() => handleSortDocument("fishery")}
                   >
                     <div className="flex items-center">
                       Fishery
@@ -1043,7 +1046,7 @@ const FisheriesManagement = () => {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer"
-                    onClick={() => handleSortIfs("created_at")}
+                    onClick={() => handleSortDocument("created_at")}
                   >
                     <div className="flex items-center">
                       Created
@@ -1054,22 +1057,22 @@ const FisheriesManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedIFS.length === 0 ? (
+                {paginatedDocuments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-24 text-center text-sm">
                       No IFS documents found.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedIFS.map((ifs) => (
-                    <TableRow key={ifs.id}>
-                      <TableCell className="font-medium">{ifs.title}</TableCell>
-                      <TableCell>{ifs.author}</TableCell>
+                  paginatedDocuments.map((doc) => (
+                    <TableRow key={doc.id}>
+                      <TableCell className="font-medium">{doc.title}</TableCell>
+                      <TableCell>{doc.author}</TableCell>
                       <TableCell>
                         <div className="flex items-center">
                           <FileText className="h-5 w-5 text-red-500 mr-2" />
                           <a
-                            href={ifs.file_url}
+                            href={doc.file_urls?.[0]}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-600 hover:underline"
@@ -1079,13 +1082,13 @@ const FisheriesManagement = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {ifs.fisheries ? (
-                          <Badge variant="outline">{ifs.fisheries?.name}</Badge>
+                        {doc.Fisheries ? (
+                          <Badge variant="outline">{doc.Fisheries?.name}</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
-                      <TableCell>{formatDate(ifs.created_at)}</TableCell>
+                      <TableCell>{formatDate(doc.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -1096,14 +1099,14 @@ const FisheriesManagement = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem
-                              onClick={() => handleEditIfs(ifs)}
+                              onClick={() => handleEditDocument(doc)}
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              onClick={() => openDeleteIfsDialog(ifs.id)}
+                              onClick={() => openDeleteDocumentDialog(doc.id)}
                               className="text-red-600"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -1123,17 +1126,17 @@ const FisheriesManagement = () => {
           <div className="flex flex-wrap gap-2 md:gap-4 items-center justify-between px-2 w-full">
             <div className="flex flex-wrap gap-2 items-center min-w-0 w-full md:w-auto">
               <div className="text-sm text-muted-foreground w-full sm:w-auto">
-                Showing {ifsStartIndex + 1}-
-                {Math.min(ifsEndIndex, filteredAndSortedIFS.length)} of{" "}
-                {filteredAndSortedIFS.length} documents
+                Showing {documentStartIndex + 1}-
+                {Math.min(documentEndIndex, filteredAndSortedDocuments.length)}{" "}
+                of {filteredAndSortedDocuments.length} documents
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <span className="text-sm text-muted-foreground">Show:</span>
                 <Select
-                  value={ifsPageSize.toString()}
+                  value={documentPageSize.toString()}
                   onValueChange={(value) => {
-                    setIfsPageSize(Number(value));
-                    setIfsCurrentPage(1);
+                    setDocumentPageSize(Number(value));
+                    setDocumentCurrentPage(1);
                   }}
                 >
                   <SelectTrigger className="w-20">
@@ -1153,23 +1156,25 @@ const FisheriesManagement = () => {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setIfsCurrentPage(Math.max(1, ifsCurrentPage - 1))
+                  setDocumentCurrentPage(Math.max(1, documentCurrentPage - 1))
                 }
-                disabled={ifsCurrentPage === 1}
+                disabled={documentCurrentPage === 1}
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
               </Button>
               <span className="text-sm text-muted-foreground">
-                Page {ifsCurrentPage} of {ifsTotalPages}
+                Page {documentCurrentPage} of {documentTotalPages}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setIfsCurrentPage(Math.min(ifsTotalPages, ifsCurrentPage + 1))
+                  setDocumentCurrentPage(
+                    Math.min(documentTotalPages, documentCurrentPage + 1)
+                  )
                 }
-                disabled={ifsCurrentPage === ifsTotalPages}
+                disabled={documentCurrentPage === documentTotalPages}
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
@@ -1218,8 +1223,8 @@ const FisheriesManagement = () => {
       </Dialog>
 
       <Dialog
-        open={isDeleteIfsDialogOpen}
-        onOpenChange={setIsDeleteIfsDialogOpen}
+        open={isDeleteDocumentDialogOpen}
+        onOpenChange={setIsDeleteDocumentDialogOpen}
       >
         <DialogContent>
           <DialogHeader>
@@ -1232,16 +1237,16 @@ const FisheriesManagement = () => {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsDeleteIfsDialogOpen(false)}
+              onClick={() => setIsDeleteDocumentDialogOpen(false)}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={handleDeleteIfs}
-              disabled={deleteIfsLoading}
+              onClick={handleDeleteDocument}
+              disabled={deleteDocumentLoading}
             >
-              {deleteIfsLoading ? (
+              {deleteDocumentLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...

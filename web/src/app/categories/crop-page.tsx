@@ -277,11 +277,11 @@ const CropsManagement = () => {
       aValue = a.id;
       bValue = b.id;
     } else if (documentSortBy === "cropType") {
-      aValue = a.crop_type?.name || "";
-      bValue = b.crop_type?.name || "";
+      aValue = a.CropTypes?.name || "";
+      bValue = b.CropTypes?.name || "";
     } else if (documentSortBy === "crop") {
-      aValue = a.crops?.name || "";
-      bValue = b.crops?.name || "";
+      aValue = a.Crops?.name || "";
+      bValue = b.Crops?.name || "";
     } else if (documentSortBy === "created_at") {
       aValue = new Date(a.created_at);
       bValue = new Date(b.created_at);

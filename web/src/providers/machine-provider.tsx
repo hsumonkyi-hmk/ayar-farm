@@ -3,8 +3,7 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
-import { MachineType, Machine, Document } from "@/lib/interface";
-export type { MachineType, Machine, Document };
+import type { MachineType, Machine, Document } from "@/lib/interface";
 
 interface MachineContextType {
   // Data
@@ -146,7 +145,6 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
       ]);
 
       const failures = results.filter((result) => result.status === "rejected");
-      const success = results.filter((result) => result.status === "fulfilled");
 
       if (failures.length === 0) {
         toast.success("Data Fetched successfully");
@@ -168,9 +166,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const createMachineType = async (data: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await api.post("/machine/machine-types", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "/machine/machine-types",
+        data,
+        token || undefined
+      );
 
       const result = response.data;
       if (result && result.machineType) {
@@ -200,9 +201,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await api.put(`/machine/machine-types/${id}`, data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.put(
+        `/machine/machine-types/${id}`,
+        data,
+        token || undefined
+      );
 
       const result = response.data;
       if (result && result.machineType) {
@@ -252,9 +256,8 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
         throw new Error("Invalid request: IDs array is required");
       }
 
-      await api.delete("/machine/machine-types", {
-        data: { ids },
-      });
+      const token = localStorage.getItem("token");
+      await api.delete("/machine/machine-types", token || undefined, { ids });
 
       setMachineTypes((prev) => prev.filter((type) => !ids.includes(type.id)));
       toast.success(`${ids.length} machine types deleted successfully`);
@@ -274,9 +277,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   const createMachine = async (data: FormData): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await api.post("/machine/machines", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.post(
+        "/machine/machines",
+        data,
+        token || undefined
+      );
 
       const result = response.data;
       if (result && result.machine) {
@@ -304,9 +310,12 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   ): Promise<boolean> => {
     try {
       setIsUploadingFile(true);
-      const response = await api.put(`/machine/machines/${id}`, data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const token = localStorage.getItem("token");
+      const response = await api.put(
+        `/machine/machines/${id}`,
+        data,
+        token || undefined
+      );
 
       const result = response.data;
       if (result && result.machine) {
@@ -352,9 +361,8 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
         throw new Error("Invalid request: IDs array is required");
       }
 
-      await api.delete("/machine/machines", {
-        data: { ids },
-      });
+      const token = localStorage.getItem("token");
+      await api.delete("/machine/machines", token || undefined, { ids });
 
       toast.success(`${ids.length} machines deleted successfully`);
       await fetchMachines();
@@ -460,7 +468,7 @@ export const MachineProvider: React.FC<MachineProviderProps> = ({
   };
 
   const getMachinesByType = (typeId: string): Machine[] => {
-    return machines.filter((machine) => machine.machine_type_id === typeId);
+    return machines.filter((machine) => machine.type_id === typeId);
   };
 
   const getTotalMachineTypes = (): number => {

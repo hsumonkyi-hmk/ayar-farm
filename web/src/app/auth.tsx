@@ -30,7 +30,6 @@ import {
 } from "lucide-react";
 
 const AuthConfirm = () => {
-  const router = useRouter();
   const { confirmation } = useAuth();
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isSubmitting, setIsSubmitting] = useState(false);

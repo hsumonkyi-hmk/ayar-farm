@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import { api } from "@/lib/api";
 
 import type { Livestock, Document } from "@/lib/interface";
 
@@ -52,8 +52,8 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   const fetchLivestock = async () => {
     setIsLoading(true);
     try {
-      const response = await api.get("/livestock/livestock/");
-      setLivestocks(response.data.livestock);
+      const response = await api.get("/livestockindustry/livestocks");
+      setLivestocks(response.data);
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || "Unknown error");
     } finally {
@@ -64,8 +64,8 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   const fetchDocuments = async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await api.get("/document/documents");
-      const fetchedDocuments = response.data.documents || [];
+      const response = await api.get("/document/documents?type=livestock");
+      const fetchedDocuments = response.documents || [];
       setDocuments(fetchedDocuments);
       return fetchedDocuments;
     } catch (err: any) {
@@ -88,9 +88,6 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
       ]);
 
       const failures = results.filter((result) => result.status === "rejected");
-      const successes = results.filter(
-        (result) => result.status === "fulfilled"
-      );
 
       let totalDataCount = 0;
       // Count livestock
@@ -125,9 +122,8 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   const createLivestock = async (data: FormData): Promise<boolean> => {
     setIsUploadingFile(true);
     try {
-      await api.post("/livestock/livestock/", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const token = localStorage.getItem("token");
+      await api.post("/livestockindustry/livestocks", data, token || undefined);
       toast.success("Livestock created successfully!");
       await fetchLivestock();
       return true;
@@ -147,9 +143,12 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
   ): Promise<boolean> => {
     setIsUploadingFile(true);
     try {
-      await api.put(`/livestock/livestock/${id}`, data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const token = localStorage.getItem("token");
+      await api.put(
+        `/livestockindustry/livestocks/${id}`,
+        data,
+        token || undefined
+      );
       toast.success("Livestock updated successfully!");
       await fetchLivestock();
       return true;
@@ -165,7 +164,11 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
 
   const deleteLivestock = async (id: string): Promise<boolean> => {
     try {
-      await api.delete(`/livestock/livestock/${id}`);
+      const token = localStorage.getItem("token");
+      await api.delete(
+        `/livestockindustry/livestocks/${id}`,
+        token || undefined
+      );
       toast.success("Livestock deleted successfully!");
       await fetchLivestock();
       return true;
@@ -179,7 +182,12 @@ export const LivestockProvider: React.FC<LivestockProviderProps> = ({
 
   const bulkDeleteLivestock = async (ids: string[]): Promise<boolean> => {
     try {
-      await api.post("/livestock/livestock/bulk-delete", { ids });
+      const token = localStorage.getItem("token");
+      await api.post(
+        "/livestockindustry/livestocks/bulk-delete",
+        { ids },
+        token || undefined
+      );
       toast.success("Selected livestock deleted successfully!");
       await fetchLivestock();
       return true;
