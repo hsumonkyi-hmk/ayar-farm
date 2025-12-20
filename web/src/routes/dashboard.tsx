@@ -1,7 +1,7 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { createFileRoute, Navigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/providers/auth-provider.tsx";
 import LoadingSpinner from "@/components/LoadingSpinner.tsx";
 import { DashboardProviders } from "@/components/dashboard/dashboard-providers";
@@ -14,7 +14,6 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const { user, isLoading } = useAuth();
-  const router = useRouter();
 
   if (isLoading) {
     return <LoadingSpinner />;
