@@ -5,7 +5,7 @@ import 'screens/register_screen.dart';
 import 'screens/verify_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: const WelcomeScreen(),
       routes: {
-        '/home': (context) => const HomeScreen(),
+        '/home': (context) => const MainScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/verify': (context) => const VerifyScreen(),
