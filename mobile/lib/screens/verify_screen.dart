@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
 
 class VerifyScreen extends StatefulWidget {
   const VerifyScreen({super.key});
@@ -48,9 +49,14 @@ class _VerifyScreenState extends State<VerifyScreen> {
       );
       if (response.token != null) {
         ApiService.setToken(response.token);
+
+        if (response.user != null) {
+          SocketService().connect(response.token!, response.user!);
+        }
+
         // TODO: Save token to local storage
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/');
+          Navigator.pushReplacementNamed(context, '/home');
         }
       }
     } catch (e) {

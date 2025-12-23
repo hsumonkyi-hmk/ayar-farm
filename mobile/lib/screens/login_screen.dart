@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,6 +37,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (response.token != null) {
         ApiService.setToken(response.token);
+
+        if (response.user != null) {
+          SocketService().connect(response.token!, response.user!);
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(
             context,

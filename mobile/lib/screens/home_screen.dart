@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../widgets/common_header.dart';
+import 'weather_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -114,189 +115,205 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Weather Widget
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderColor),
-                        boxShadow: [
-                          if (!isDark)
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            top: -32,
-                            right: -32,
-                            child: Container(
-                              width: 128,
-                              height: 128,
-                              decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.2),
-                                shape: BoxShape.circle,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const WeatherScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                          boxShadow: [
+                            if (!isDark)
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                          ],
+                        ),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              top: -32,
+                              right: -32,
+                              child: Container(
+                                width: 128,
+                                height: 128,
+                                decoration: BoxDecoration(
+                                  color: primaryColor.withOpacity(0.2),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(20),
-                            child:
-                                _isLoadingWeather
-                                    ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                    : _weather == null
-                                    ? Center(
-                                      child: Text(
-                                        _locationError.isNotEmpty
-                                            ? _locationError
-                                            : 'Weather unavailable',
-                                        style: TextStyle(color: textSubColor),
-                                      ),
-                                    )
-                                    : Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Current Location', // API doesn't seem to return city name in the snippet provided
-                                                  style: TextStyle(
-                                                    color: textSubColor,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  '${_weather!['current']['temperature']}°${_weather!['current']['unit'] ?? 'C'}',
-                                                  style: TextStyle(
-                                                    color: textMainColor,
-                                                    fontSize: 30,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  _weather!['current']['status'] ??
-                                                      'Unknown',
-                                                  style: TextStyle(
-                                                    color: textMainColor,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Container(
-                                              width: 48,
-                                              height: 48,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    isDark
-                                                        ? Colors.blue
-                                                            .withOpacity(0.2)
-                                                        : Colors.blue[50],
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.wb_sunny_outlined,
-                                                color: Colors.blue,
-                                                size: 28,
-                                              ),
-                                            ),
-                                          ],
+                            Padding(
+                              padding: const EdgeInsets.all(20),
+                              child:
+                                  _isLoadingWeather
+                                      ? const Center(
+                                        child: CircularProgressIndicator(),
+                                      )
+                                      : _weather == null
+                                      ? Center(
+                                        child: Text(
+                                          _locationError.isNotEmpty
+                                              ? _locationError
+                                              : 'Weather unavailable',
+                                          style: TextStyle(color: textSubColor),
                                         ),
-                                        const SizedBox(height: 16),
-                                        Divider(color: borderColor, height: 1),
-                                        const SizedBox(height: 16),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.water_drop_outlined,
-                                              size: 18,
-                                              color: textSubColor,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              _weather!['current']['humidity'] ??
-                                                  '--%',
-                                              style: TextStyle(
-                                                color: textMainColor,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 24),
-                                            Icon(
-                                              Icons.air,
-                                              size: 18,
-                                              color: textSubColor,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              _weather!['current']['wind'] ??
-                                                  '-- km/h',
-                                              style: TextStyle(
-                                                color: textMainColor,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: primaryColor.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Row(
+                                      )
+                                      : Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Icon(
-                                                Icons.lightbulb_outline,
-                                                size: 18,
-                                                color:
-                                                    isDark
-                                                        ? primaryColor
-                                                        : primaryContentColor,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Text(
-                                                  'Good day for sowing wheat.',
-                                                  style: TextStyle(
-                                                    color:
-                                                        isDark
-                                                            ? primaryColor
-                                                            : primaryContentColor,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    'Current Location', // API doesn't seem to return city name in the snippet provided
+                                                    style: TextStyle(
+                                                      color: textSubColor,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
                                                   ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    '${_weather!['current']['temperature']}°${_weather!['current']['unit'] ?? 'C'}',
+                                                    style: TextStyle(
+                                                      color: textMainColor,
+                                                      fontSize: 30,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    _weather!['current']['status'] ??
+                                                        'Unknown',
+                                                    style: TextStyle(
+                                                      color: textMainColor,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Container(
+                                                width: 48,
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      isDark
+                                                          ? Colors.blue
+                                                              .withOpacity(0.2)
+                                                          : Colors.blue[50],
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.wb_sunny_outlined,
+                                                  color: Colors.blue,
+                                                  size: 28,
                                                 ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                          ),
-                        ],
+                                          const SizedBox(height: 16),
+                                          Divider(
+                                            color: borderColor,
+                                            height: 1,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                Icons.water_drop_outlined,
+                                                size: 18,
+                                                color: textSubColor,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _weather!['current']['humidity'] ??
+                                                    '--%',
+                                                style: TextStyle(
+                                                  color: textMainColor,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 24),
+                                              Icon(
+                                                Icons.air,
+                                                size: 18,
+                                                color: textSubColor,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                _weather!['current']['wind'] ??
+                                                    '-- km/h',
+                                                style: TextStyle(
+                                                  color: textMainColor,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: primaryColor.withOpacity(
+                                                0.1,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.lightbulb_outline,
+                                                  size: 18,
+                                                  color:
+                                                      isDark
+                                                          ? primaryColor
+                                                          : primaryContentColor,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    'Good day for sowing wheat.',
+                                                    style: TextStyle(
+                                                      color:
+                                                          isDark
+                                                              ? primaryColor
+                                                              : primaryContentColor,
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
