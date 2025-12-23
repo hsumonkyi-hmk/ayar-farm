@@ -61,7 +61,7 @@ ayar-farm/
 
 ### Using Docker
 
-The easiest way to run the entire stack (API, Web, and Database) is using Docker Compose.
+The easiest way to run the entire stack (API, Web, Database, and Mobile Web) is using Docker Compose.
 
 ```bash
 # Start all services
@@ -70,8 +70,11 @@ docker-compose up --build
 # Services will be available at:
 # API: http://localhost:3000
 # Web: http://localhost:5173
+# Mobile (Web): http://localhost:8080
 # Database: localhost:5432
 ```
+
+**Note:** The mobile service builds Flutter for web and serves it via nginx. For native mobile development, see the Mobile Setup section below.
 
 ## Local Development
 
