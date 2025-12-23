@@ -1,0 +1,28 @@
+# Stage 1: Build the Flutter Web application
+FROM ghcr.io/cirruslabs/flutter:stable AS build
+
+WORKDIR /app
+
+# Copy pubspec files to cache dependencies
+COPY mobile/pubspec.yaml ./
+# If you have a pubspec.lock, uncomment the next line
+# COPY mobile/pubspec.lock ./
+
+RUN flutter pub get
+
+# Copy the rest of the mobile project
+COPY mobile/ .
+
+# Build for web
+RUN flutter build web --release
+
+# Stage 2: Serve the application with Nginx
+FROM nginx:alpine
+
+# Copy the build output to Nginx's html directory
+COPY --from=build /app/build/web /usr/share/nginx/html
+
+# Expose port 80
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -23,6 +23,14 @@ services:
       - api
     restart: unless-stopped
 
+  mobile:
+    build:
+      context: .
+      dockerfile: Dockerfile.mobile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
   database:
     build:
       context: .
