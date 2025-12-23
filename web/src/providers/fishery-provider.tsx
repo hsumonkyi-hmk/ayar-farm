@@ -6,8 +6,6 @@ import type { Fishery, Document } from "@/lib/interface";
 import { api } from "@/lib/api";
 import { FisheryContext } from "@/context/fishery-context";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
-
 export const FisheryProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
