@@ -33,9 +33,9 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> get(String endpoint) async {
-    final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
-    final response = await http.get(url, headers: _getHeaders());
+  static Future<Map<String, dynamic>> get(String endpoint, {Map<String, String>? queryParams}) async {
+    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint').replace(queryParameters: queryParams);
+    final response = await http.get(uri, headers: _getHeaders());
     return jsonDecode(response.body);
   }
 

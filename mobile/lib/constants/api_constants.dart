@@ -10,4 +10,11 @@ class ApiConstants {
   static const String resetPassword = '/auth/reset-password';
   static const String updateAccount = '/auth/update';
   static const String deleteAccount = '/auth/delete';
+
+  // Crop endpoints
+  static const String cropTypes = '/cropsandpulses/croptypes';
+  static const String crops = '/cropsandpulses/crops';
+
+  // Document endpoints
+  static const String documents = '/document/documents';
 }

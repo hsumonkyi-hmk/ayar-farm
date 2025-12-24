@@ -84,7 +84,7 @@ export const MachineProvider: React.FC<{ children: ReactNode }> = ({
   const fetchDocuments = async (): Promise<Document[]> => {
     try {
       setError(null);
-      const response = await api.get("/document/documents");
+      const response = await api.get("/document/documents?type=machine");
       const data = response.documents;
 
       if (Array.isArray(data)) {

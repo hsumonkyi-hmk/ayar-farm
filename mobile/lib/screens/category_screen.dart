@@ -3,6 +3,7 @@ import '../widgets/common_header.dart';
 import 'market_screen.dart';
 import 'weather_screen.dart';
 import 'calculator_screen.dart';
+import 'crop_type_screen.dart';
 
 class CategoryScreen extends StatelessWidget {
   const CategoryScreen({super.key});
@@ -63,7 +64,12 @@ class CategoryScreen extends StatelessWidget {
                       surfaceColor,
                       textMainColor,
                       textSubColor,
-                      onTap: () => Navigator.of(context).pushNamed('/crop'),
+                      onTap:
+                          () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const CropTypeScreen(),
+                            ),
+                          ),
                     ),
                     _buildKnowledgeCard(
                       'Livestock',
