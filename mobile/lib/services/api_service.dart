@@ -14,16 +14,17 @@ class ApiService {
   }
 
   static Map<String, String> _getHeaders() {
-    final headers = {
-      'Content-Type': 'application/json',
-    };
+    final headers = {'Content-Type': 'application/json'};
     if (_token != null) {
       headers['Authorization'] = 'Bearer $_token';
     }
     return headers;
   }
 
-  static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> post(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
     final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     final response = await http.post(
       url,
@@ -33,13 +34,21 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> get(String endpoint, {Map<String, String>? queryParams}) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint').replace(queryParameters: queryParams);
+  static Future<Map<String, dynamic>> get(
+    String endpoint, {
+    Map<String, String>? queryParams,
+  }) async {
+    final uri = Uri.parse(
+      '${ApiConstants.baseUrl}$endpoint',
+    ).replace(queryParameters: queryParams);
     final response = await http.get(uri, headers: _getHeaders());
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> put(String endpoint, Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> put(
+    String endpoint,
+    Map<String, dynamic> data,
+  ) async {
     final url = Uri.parse('${ApiConstants.baseUrl}$endpoint');
     final response = await http.put(
       url,
