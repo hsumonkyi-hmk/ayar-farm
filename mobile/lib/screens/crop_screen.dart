@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
+import 'document_screen.dart';
 
 class CropScreen extends StatefulWidget {
   final String? cropType;
@@ -130,25 +131,30 @@ class _CropScreenState extends State<CropScreen> {
                             : 'No crops available',
                       ),
                     )
-                    : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.75,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                      itemCount: _crops.length,
-                      itemBuilder: (context, index) {
-                        final crop = _crops[index];
-                        return _buildCropCard(
-                          crop,
-                          surfaceColor,
-                          textMainColor,
-                          textMutedColor,
-                        );
-                      },
+                    : RefreshIndicator(
+                      onRefresh: _fetchCrops,
+                      color: primaryColor,
+                      backgroundColor: surfaceColor,
+                      child: GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.75,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                        itemCount: _crops.length,
+                        itemBuilder: (context, index) {
+                          final crop = _crops[index];
+                          return _buildCropCard(
+                            crop,
+                            surfaceColor,
+                            textMainColor,
+                            textMutedColor,
+                          );
+                        },
+                      ),
                     ),
           ),
         ],
@@ -162,89 +168,100 @@ class _CropScreenState extends State<CropScreen> {
     Color textMainColor,
     Color textMutedColor,
   ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => DocumentScreen(type: 'crop', type_id: crop['id']),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(12),
-                    ),
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        crop['image_urls'] != null &&
-                                crop['image_urls'].isNotEmpty
-                            ? crop['image_urls'][0]
-                            : '',
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      crop['CropTypes']['name'] ?? 'Unknown',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      image: DecorationImage(
+                        image: NetworkImage(
+                          crop['image_urls'] != null &&
+                                  crop['image_urls'].isNotEmpty
+                              ? crop['image_urls'][0]
+                              : '',
+                        ),
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  crop['name'] ?? 'Unknown',
-                  style: TextStyle(
-                    color: textMainColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        crop['CropTypes']['name'] ?? 'Unknown',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  crop['description'] ?? 'No description',
-                  style: TextStyle(color: textMutedColor, fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    crop['name'] ?? 'Unknown',
+                    style: TextStyle(
+                      color: textMainColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    crop['description'] ?? 'No description',
+                    style: TextStyle(color: textMutedColor, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

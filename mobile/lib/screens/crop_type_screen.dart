@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../widgets/common_header.dart';
 import '../services/api_service.dart';
 import '../constants/api_constants.dart';
 import 'crop_screen.dart';
@@ -68,75 +67,92 @@ class _CropTypeScreenState extends State<CropTypeScreen> {
         isDark ? const Color(0xFFFFFFFF) : const Color(0xFF111813);
     final textSubColor =
         isDark ? const Color(0xFF8BA892) : const Color(0xFF61896B);
-    final borderColor =
-        isDark ? Colors.white.withOpacity(0.1) : const Color(0xFFE5E7EB);
+    final backgroundColor =
+        isDark ? const Color(0xFF102215) : const Color(0xFFF6F8F6);
 
-    return Column(
-      children: [
-        const CommonHeader(),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: surfaceColor.withOpacity(0.95),
+            child: Row(
               children: [
-                // Section 1: Crop Types
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Crop Types',
-                      style: TextStyle(
-                        color: textMainColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isDark ? Colors.grey[800] : Colors.grey[100],
                     ),
-                  ],
+                    child: Icon(Icons.arrow_back, color: textMainColor),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Crop Types',
+                    style: TextStyle(
+                      color: textMainColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child:
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : _cropTypes.isEmpty
                     ? const Center(child: Text('No crop types available'))
-                    : GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.8,
-                      children:
-                          _cropTypes.map((cropType) {
-                            return _buildCropTypeCard(
-                              cropType['name'] ?? 'Unknown',
-                              cropType['description'] ?? 'No description',
-                              cropType['image_urls'] != null &&
-                                      cropType['image_urls'].isNotEmpty
-                                  ? cropType['image_urls'][0]
-                                  : '',
-                              surfaceColor,
-                              textMainColor,
-                              textSubColor,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => CropScreen(
-                                          cropType: cropType['name'],
-                                        ),
-                                  ),
-                                );
-                              },
-                            );
-                          }).toList(),
+                    : RefreshIndicator(
+                      onRefresh: _fetchCropTypes,
+                      color: primaryColor,
+                      backgroundColor: surfaceColor,
+                      child: GridView.count(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 0.8,
+                        children:
+                            _cropTypes.map((cropType) {
+                              return _buildCropTypeCard(
+                                cropType['name'] ?? 'Unknown',
+                                cropType['description'] ?? 'No description',
+                                cropType['image_urls'] != null &&
+                                        cropType['image_urls'].isNotEmpty
+                                    ? cropType['image_urls'][0]
+                                    : '',
+                                surfaceColor,
+                                textMainColor,
+                                textSubColor,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => CropScreen(
+                                            cropType: cropType['name'],
+                                          ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }).toList(),
+                      ),
                     ),
-              ],
-            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
