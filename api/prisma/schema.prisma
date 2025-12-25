@@ -178,6 +178,7 @@ model Documents {
   title     String
   author    String
   file_urls String[]
+  size      Int?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

@@ -187,13 +187,14 @@ export class DocumentService {
         }
     }
 
-    public static async addNewDocument(title: string, author: string, file_urls: string[], crop_type_id: string, livestock_type_id: string, machine_type_id: string, crop_id: string, livestock_id: string, machine_id: string, fish_id: string ): Promise<{ document: any }> {
+    public static async addNewDocument(title: string, author: string, file_urls: string[], size: number, crop_type_id: string, livestock_type_id: string, machine_type_id: string, crop_id: string, livestock_id: string, machine_id: string, fish_id: string ): Promise<{ document: any }> {
         try {
             const document = await prisma.documents.create({
                 data: {
                     title,
                     author,
                     file_urls,
+                    size,
                     crop_type_id: crop_type_id || null,
                     livestock_type_id: livestock_type_id || null,
                     machine_type_id: machine_type_id || null,

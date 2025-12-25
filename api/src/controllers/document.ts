@@ -29,9 +29,10 @@ export class DocumentController {
     public async addDocument(req: Request, res: Response): Promise<void> {
         try {
             const { title, author, crop_type_id, livestock_type_id, machine_type_id, crop_id, livestock_id, machine_id, fish_id } = req.body;
-            const file_urls = req.files ? (req.files as Express.Multer.File[]).map(file => file.path) : [];
-
-            const newDocument = (await DocumentService.addNewDocument(title, author, file_urls, crop_type_id, livestock_type_id, machine_type_id, crop_id, livestock_id, machine_id, fish_id)).document;
+            const files = req.files as Express.Multer.File[];
+            const file_urls = files ? files.map(file => file.path) : [];
+            const size = files && files.length > 0 ? files[0].size : (req.body.size ? parseInt(req.body.size) : 0);
+            const newDocument = (await DocumentService.addNewDocument(title, author, file_urls, size, crop_type_id, livestock_type_id, machine_type_id, crop_id, livestock_id, machine_id, fish_id)).document;
 
             if (!newDocument) {
                 res.status(400).json({ message: 'Document added fail' })
