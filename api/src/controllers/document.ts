@@ -6,12 +6,13 @@ export class DocumentController {
         try {
             const { id } = req.params;
             const { type } = req.query;
+            const { type_id } = req.query;
                         
             if (id) {
                 const { document } = await DocumentService.getDocumentById(id);
                 res.status(200).json({ message: "Get Document(s) successfully", document });
             } else if (typeof type === 'string') {
-                const { documents } = await DocumentService.getAllDocumentByType(type);
+                const { documents } = type_id ? await DocumentService.getAllDocumentByTypeId(type, type_id as string) : await DocumentService.getAllDocumentByType(type);
                 res.status(200).json({ message: "Get Document(s) successfully", documents });
             } else {
                 const { documents } = await DocumentService.getAllDocuments();

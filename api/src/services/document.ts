@@ -89,6 +89,104 @@ export class DocumentService {
         }
     }
 
+    public static async getAllDocumentByTypeId(type: string, type_id: string): Promise<{ documents: any }> {
+        try {
+            let documents;
+            if (type === "crop") {
+                documents = type_id ? (await prisma.documents.findMany({
+                    where: {
+                        crop_id: type_id
+                    },
+                    include: {
+                        CropTypes: true,
+                        Crops: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                })) : (await prisma.documents.findMany({
+                    where: {
+                        OR: [
+                            { crop_type_id: { not: null } },
+                            { crop_id: { not: null } }
+                        ]
+                    },
+                    include: {
+                        CropTypes: true,
+                        Crops: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                }))
+            } else if (type === "livestock") {
+                documents = type_id ? (await prisma.documents.findMany({
+                    where: {
+                        livestock_id: type_id
+                    },
+                    include: {
+                        LivestockTypes: true,
+                        Livestocks: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                })) : (await prisma.documents.findMany({
+                    where: {
+                        OR: [
+                            { livestock_type_id: { not: null } },
+                            { livestock_id: { not: null } }
+                        ]
+                    },
+                    include: {
+                        LivestockTypes: true,
+                        Livestocks: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                }));
+            } else if (type === "fishery") {
+                documents = type_id ? (await prisma.documents.findMany({
+                    where: {
+                        fish_id: type_id
+                    },
+                    include: {
+                        Fishs: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                })) : (await prisma.documents.findMany({
+                    where: {
+                        fish_id: { not: null }
+                    },
+                    include: {
+                        Fishs: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                }));
+            } else if (type === "machine") {
+                documents = type_id ? (await prisma.documents.findMany({
+                    where: {
+                        machine_id: type_id
+                    },
+                    include: {
+                        MachineTypes: true,
+                        Machines: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                })) : (await prisma.documents.findMany({
+                    where: {
+                        OR: [
+                            { machine_type_id: { not: null } },
+                            { machine_id: { not: null } }
+                        ]
+                    },
+                    include: {
+                        MachineTypes: true,
+                        Machines: true
+                    },
+                    orderBy: { created_at: 'desc' }
+                }));
+            }
+
+            return { documents }
+        } catch (error) {
+            throw new Error(`Database query failed: ${String(error)}`);
+        }
+    }
+
     public static async addNewDocument(title: string, author: string, file_urls: string[], crop_type_id: string, livestock_type_id: string, machine_type_id: string, crop_id: string, livestock_id: string, machine_id: string, fish_id: string ): Promise<{ document: any }> {
         try {
             const document = await prisma.documents.create({
