@@ -15,6 +15,16 @@ class ApiConstants {
   static const String cropTypes = '/cropsandpulses/croptypes';
   static const String crops = '/cropsandpulses/crops';
 
+  // Fish endpoints
+  static const String fishs = '/fishery/fishs';
+
+  // Livestock endpoints
+  static const String livestocks = '/livestockindustry/livestocks';
+
+  // Machine endpoints
+  static const String machinetypes = '/agriindustry/machinetypes';
+  static const String machines = '/agriindustry/machines';
+
   // Document endpoints
   static const String documents = '/document/documents';
 }
