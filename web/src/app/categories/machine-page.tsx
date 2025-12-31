@@ -1418,7 +1418,7 @@ const MachinesManagement = () => {
                           className="bg-green-600/10 text-green-600"
                         >
                           <Tag className="h-4 w-4 mr-1" />
-                          {machine.type.name}
+                          {machine.type?.name || "Unknown"}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(machine.created_at)}</TableCell>
@@ -1564,7 +1564,7 @@ const MachinesManagement = () => {
                     ).values()
                   ).map((machine) => (
                     <SelectItem key={machine.id} value={machine.id}>
-                      {machine.name} ({machine.type.name})
+                      {machine.name} ({machine.type?.name || "Unknown"})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1672,7 +1672,7 @@ const MachinesManagement = () => {
                               ).values()
                             ).map((machine) => (
                               <SelectItem key={machine.id} value={machine.id}>
-                                {machine.name} ({machine.type.name})
+                                {machine.name} ({machine.type?.name || "Unknown"})
                               </SelectItem>
                             ))}
                           </SelectContent>

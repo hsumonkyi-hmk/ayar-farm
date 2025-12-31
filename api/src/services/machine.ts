@@ -31,7 +31,8 @@ export class MachineService {
     public static async getAllMachines(): Promise<{machines: any}> {
         try {
             const machines = await prisma.machines.findMany({
-                orderBy: { created_at: 'desc' }
+                orderBy: { created_at: 'desc' },
+                include: { MachineTypes: true }
             })
 
             return { machines };
